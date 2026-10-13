@@ -1,0 +1,306 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hearthsound.app/schemas/plugin-manifest-1.json",
+  "title": "Hearthsound plugin manifest",
+  "description": "The manifest.json of a Hearthsound plugin component, manifestVersion 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifestVersion",
+    "id",
+    "name",
+    "version",
+    "description",
+    "license",
+    "homepage",
+    "api",
+    "provides",
+    "permissions",
+    "config",
+    "resources"
+  ],
+  "properties": {
+    "manifestVersion": {
+      "description": "Manifest format version.",
+      "const": 1
+    },
+    "id": {
+      "description": "Reverse-DNS-style plugin identifier.",
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+    },
+    "name": {
+      "description": "Human-readable plugin name.",
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "description": "Plugin version, in SemVer.",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+    },
+    "description": {
+      "description": "One-sentence description of what the plugin does.",
+      "type": "string",
+      "minLength": 1
+    },
+    "authors": {
+      "description": "Plugin authors.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "license": {
+      "description": "SPDX license expression.",
+      "type": "string",
+      "minLength": 1
+    },
+    "homepage": {
+      "description": "Project URL.",
+      "type": "string",
+      "pattern": "^https?://"
+    },
+    "api": {
+      "description": "Plugin API version the component implements.",
+      "type": "string",
+      "pattern": "^hearthsound:plugin@[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "provides": {
+      "description": "Provider layers the component implements.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "catalog",
+          "metadata",
+          "artwork",
+          "acquisition",
+          "verification",
+          "scrobble",
+          "discovery",
+          "lyrics",
+          "playlist-import"
+        ]
+      }
+    },
+    "catalog": {
+      "description": "Catalog layer options; allowed only for catalog plugins.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "imageCachePolicy": {
+          "description": "Whether the server may cache this provider's images.",
+          "enum": ["cache", "no-store"],
+          "default": "cache"
+        }
+      }
+    },
+    "urlPatterns": {
+      "description": "URL patterns routing imports; allowed only for playlist-import plugins.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "permissions": {
+      "description": "Host capabilities the plugin declares; empty when it needs none.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "http": {
+          "description": "Outbound HTTP access.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hosts"],
+          "properties": {
+            "hosts": {
+              "description": "Hostnames the plugin may reach; wildcard or $config: prefixed entries allowed.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(\\*\\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$|^\\$config:[A-Za-z][A-Za-z0-9_]*$"
+              }
+            },
+            "rateLimit": {
+              "description": "Request rate the server enforces for this plugin.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["perSecond", "burst"],
+              "properties": {
+                "perSecond": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "burst": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "maxBodyBytes": {
+              "description": "Largest response body the plugin may read.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 67108864
+            }
+          }
+        },
+        "kv": {
+          "description": "Key-value storage access.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxBytes": {
+              "description": "Byte budget for the plugin's key-value namespace.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 67108864
+            }
+          }
+        },
+        "files": {
+          "description": "Local file access.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "importRoots": {
+              "description": "Whether the plugin may read the import roots granted to it.",
+              "type": "boolean"
+            }
+          }
+        },
+        "process": {
+          "description": "External process execution; no tools are available in this API version.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tools": {
+              "description": "Tools the plugin may run; must be empty.",
+              "type": "array",
+              "maxItems": 0,
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "config": {
+      "description": "Server- and user-scoped configuration the plugin accepts.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["server", "user"],
+      "properties": {
+        "server": {
+          "description": "Server-scoped configuration, or null when the plugin takes none.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/configSection"
+            }
+          ]
+        },
+        "user": {
+          "description": "User-scoped configuration, or null when the plugin takes none.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/configSection"
+            }
+          ]
+        }
+      }
+    },
+    "resources": {
+      "description": "Resource ceilings for each plugin instance.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "memoryMb": {
+          "description": "Memory the instance may use, in MiB.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 128
+        },
+        "callTimeoutMs": {
+          "description": "Wall-clock deadline for one provider call, in milliseconds.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120000,
+          "default": 30000
+        },
+        "maxInstances": {
+          "description": "Number of concurrent instances of this plugin.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "default": 2
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "provides": {
+            "contains": {
+              "const": "playlist-import"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["urlPatterns"]
+      },
+      "else": {
+        "not": {
+          "required": ["urlPatterns"]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "provides": {
+            "contains": {
+              "const": "catalog"
+            }
+          }
+        }
+      },
+      "then": {},
+      "else": {
+        "not": {
+          "required": ["catalog"]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "configSection": {
+      "description": "A JSON Schema plus its form layout.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "uiSchema"],
+      "properties": {
+        "schema": {
+          "description": "A draft-07 JSON Schema for this configuration section.",
+          "type": "object"
+        },
+        "uiSchema": {
+          "description": "The form layout for the schema.",
+          "type": "object"
+        }
+      }
+    }
+  }
+}

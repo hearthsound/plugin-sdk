@@ -13,3 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `hearthsound-plugin` crate with shared bindings, host import wrappers,
   config helpers, logging macros and the catalog provider export macro.
 - A `hello-catalog` example plugin that builds for `wasm32-wasip2`.
+- The draft-07 plugin manifest schema at `schema/manifest.schema.json`.
+- The `hsplugin` CLI with a `check` subcommand that validates a manifest and
+  the component rules of a compiled plugin.
