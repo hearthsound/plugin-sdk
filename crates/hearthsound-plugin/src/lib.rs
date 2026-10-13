@@ -38,6 +38,13 @@
 //! | `hearthsound-plugin-acquisition` | The `acquisition` provider world |
 //! | `hearthsound-plugin` | The `catalog` provider world, host wrappers, config and logging helpers, and the log macros |
 //!
+//! # Helpers
+//!
+//! On top of the raw host imports in [`host`], the crate provides [`config`]
+//! for typed server configuration, [`http`] for JSON requests, [`kv`] for
+//! values that outlive a call, and [`log`] with the [`trace!`] to [`error!`]
+//! macros.
+//!
 //! # Example
 //!
 //! A catalog plugin implements the [`catalog_provider`] guest trait and hands
@@ -189,6 +196,12 @@ pub use hearthsound_plugin_acquisition::acquisition_provider;
 /// ```
 #[doc(inline)]
 pub use acquisition_provider::export_acquisition_provider;
+
+/// Typed HTTP helpers over the `host-http` import.
+pub mod http;
+
+/// Typed key-value helpers over the `host-kv` import.
+pub mod kv;
 
 /// Server-scoped configuration helpers.
 pub mod config {

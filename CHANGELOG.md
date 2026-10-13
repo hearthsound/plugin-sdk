@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and host bindings once so that every provider world remaps its imports there.
 - `hearthsound_plugin::host::files`, the `host-files` import an acquisition
   provider reports the files it produced through.
+- The `hearthsound_plugin::http` and `hearthsound_plugin::kv` helpers: JSON
+  requests with `http-error` and status mapping to `ProviderError`, and values
+  stored and read through `host-kv`.
 
 ## [0.1.0] - 2026-10-13
 
