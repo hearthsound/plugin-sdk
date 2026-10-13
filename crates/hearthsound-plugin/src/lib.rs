@@ -86,6 +86,26 @@ pub mod catalog_provider {
     });
 }
 
+/// Wires a catalog provider into the component's exports.
+///
+/// Pass a type that implements the
+/// `catalog_provider::exports::hearthsound::plugin::lifecycle::Guest` and
+/// `catalog_provider::exports::hearthsound::plugin::catalog::Guest` traits.
+/// The macro expands to the `#[unsafe(no_mangle)]` entry points the component
+/// model expects.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyCatalog;
+/// // impl ...::lifecycle::Guest for MyCatalog {}
+/// // impl ...::catalog::Guest for MyCatalog {}
+///
+/// hearthsound_plugin::export_catalog_provider!(MyCatalog);
+/// ```
+#[doc(inline)]
+pub use catalog_provider::export_catalog_provider;
+
 /// Server-scoped configuration helpers.
 pub mod config {
     use crate::types;
