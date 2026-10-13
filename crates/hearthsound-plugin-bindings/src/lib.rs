@@ -56,10 +56,12 @@ pub use bindings::hearthsound::plugin::types;
 
 /// Host imports available to a plugin.
 ///
-/// Each submodule wraps one host interface: [`log`] for tracing, [`http`] for
-/// outbound HTTP, [`kv`] for key-value storage, [`config`] for the instance's
-/// server-scoped configuration and [`files`] for the file access an acquisition
-/// provider needs to report the files it produced.
+/// Each submodule wraps one host interface: [`log`](crate::host::log) for
+/// tracing, [`http`](crate::host::http) for outbound HTTP,
+/// [`kv`](crate::host::kv) for key-value storage,
+/// [`config`](crate::host::config) for the instance's server-scoped
+/// configuration and [`files`](crate::host::files) for the file access an
+/// acquisition provider needs to report the files it produced.
 pub mod host {
     pub use crate::bindings::hearthsound::plugin::host_config as config;
     pub use crate::bindings::hearthsound::plugin::host_http as http;

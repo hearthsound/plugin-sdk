@@ -4,16 +4,20 @@
 //! strings and bytes and returns a response record. This module adds the parts
 //! every provider repeats, so a plugin does not hand-roll them:
 //!
-//! - request construction for the two shapes a JSON API needs, [`get`] and
-//!   [`post_json`];
-//! - [`send`], which maps the host's `http-error` to [`ProviderError`];
-//! - [`status_error`], which turns a non-2xx response into the matching
-//!   [`ProviderError`] variant, including `retry-after` for `429`;
-//! - [`send_json`], which sends a request and deserializes a JSON body.
+//! - request construction for the two shapes a JSON API needs,
+//!   [`get`](crate::http::get) and [`post_json`](crate::http::post_json);
+//! - [`send`](crate::http::send), which maps the host's `http-error` to
+//!   [`ProviderError`](crate::types::ProviderError);
+//! - [`status_error`](crate::http::status_error), which turns a non-2xx response into
+//!   the matching [`ProviderError`](crate::types::ProviderError) variant,
+//!   including `retry-after` for `429`;
+//! - [`send_json`](crate::http::send_json), which sends a request and deserializes a
+//!   JSON body.
 //!
 //! The host still enforces the instance's permissions: a URL outside the
 //! manifest's `permissions.http.hosts` allowlist fails with
-//! `http-error.denied`, which [`send`] maps to [`ProviderError::Unauthorized`].
+//! `http-error.denied`, which [`send`](crate::http::send) maps to
+//! [`ProviderError::Unauthorized`](crate::types::ProviderError::Unauthorized).
 //!
 //! # Example
 //!
