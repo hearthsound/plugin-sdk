@@ -8,6 +8,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+hearthsound-plugin-acquisition = { path = "../hearthsound-plugin-acquisition" }
+hearthsound-plugin-bindings = { path = "../hearthsound-plugin-bindings" }
+hearthsound-plugin-metadata = { path = "../hearthsound-plugin-metadata" }
 wit-bindgen.workspace = true
 serde.workspace = true
 serde_json.workspace = true

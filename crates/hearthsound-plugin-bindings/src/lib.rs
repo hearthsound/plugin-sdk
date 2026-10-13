@@ -1,0 +1,69 @@
+//! Shared bindings for the `hearthsound:plugin@0.1.0` WIT package.
+//!
+//! Every provider world imports the same `types` interface and the same host
+//! interfaces, and every provider world exports `lifecycle`. This crate
+//! generates those interfaces exactly once, and each provider world crate
+//! (`hearthsound-plugin-metadata`, `hearthsound-plugin-acquisition` and the
+//! catalog world inside `hearthsound-plugin`) remaps its imports here with
+//! wit-bindgen's `with` option.
+//!
+//! Remapping matters because it keeps one Rust type per WIT type: a plugin that
+//! hands a [`types::Track`] to the catalog world and a [`types::Album`] to the
+//! metadata world uses the same structs, and the host wrappers in
+//! [`host`] accept and return those types with no conversion.
+//!
+//! Provider worlds cannot share a crate: wit-bindgen exports the interface CABI
+//! macro of an exported interface under a name derived from that interface
+//! (`__export_hearthsound_plugin_lifecycle_0_1_0_cabi`), so two worlds that both
+//! export `lifecycle` in one crate collide at compile time. One world per crate
+//! is therefore structural, and `hearthsound-plugin` re-exports all of them.
+
+#[allow(missing_docs, unsafe_code, clippy::all)]
+mod bindings {
+    wit_bindgen::generate!({
+        path: "../../wit",
+        world: "hearthsound:plugin/base",
+    });
+}
+
+/// Bindings for the `host-files` import, which only acquisition providers use.
+///
+/// The base world does not import `host-files`, so the interface is generated
+/// on its own from a minimal internal world, re-exported as
+/// [`host::files`](crate::host::files).
+#[allow(missing_docs, unsafe_code, clippy::all)]
+mod host_files_bindings {
+    wit_bindgen::generate!({
+        path: "../../wit",
+        inline: "
+            package hearthsound:sdk@0.1.0;
+            world host-files {
+                import hearthsound:plugin/host-files@0.1.0;
+            }
+        ",
+        world: "hearthsound:sdk/host-files",
+        generate_all,
+    });
+}
+
+/// Shared record types of the `hearthsound:plugin@0.1.0` package.
+///
+/// This re-exports the generated `types` interface, which holds the records
+/// every provider interface shares: `IdPair`, `ArtistCredit`, `Image`,
+/// `AlbumRef`, `Track`, `Album`, `Artist`, the `ProviderError` variant, the
+/// `EntityKind` enum and `UserContext`.
+pub use bindings::hearthsound::plugin::types;
+
+/// Host imports available to a plugin.
+///
+/// Each submodule wraps one host interface: [`log`] for tracing, [`http`] for
+/// outbound HTTP, [`kv`] for key-value storage, [`config`] for the instance's
+/// server-scoped configuration and [`files`] for the file access an acquisition
+/// provider needs to report the files it produced.
+pub mod host {
+    pub use crate::bindings::hearthsound::plugin::host_config as config;
+    pub use crate::bindings::hearthsound::plugin::host_http as http;
+    pub use crate::bindings::hearthsound::plugin::host_kv as kv;
+    pub use crate::bindings::hearthsound::plugin::host_log as log;
+    pub use crate::host_files_bindings::hearthsound::plugin::host_files as files;
+}

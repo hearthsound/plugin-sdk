@@ -1,6 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["crates/hearthsound-plugin", "crates/hearthsound-plugin-cli"]
+members = [
+    "crates/hearthsound-plugin",
+    "crates/hearthsound-plugin-acquisition",
+    "crates/hearthsound-plugin-bindings",
+    "crates/hearthsound-plugin-cli",
+    "crates/hearthsound-plugin-metadata",
+]
 exclude = ["examples/hello-catalog"]
 
 [workspace.package]

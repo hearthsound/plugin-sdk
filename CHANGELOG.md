@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The `metadata` and `acquisition` provider worlds in the new
+  `hearthsound-plugin-metadata` and `hearthsound-plugin-acquisition` crates,
+  re-exported by `hearthsound-plugin` with the `export_metadata_provider!` and
+  `export_acquisition_provider!` macros.
+- The `hearthsound-plugin-bindings` crate, which generates the shared `types`
+  and host bindings once so that every provider world remaps its imports there.
+- `hearthsound_plugin::host::files`, the `host-files` import an acquisition
+  provider reports the files it produced through.
+
 ## [0.1.0] - 2026-10-13
 
 ### Added
