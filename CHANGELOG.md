@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-13
+
 ### Added
 
 - The `hearthsound:plugin@0.1.0` WIT package.
@@ -18,3 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the component rules of a compiled plugin.
 - An `hsplugin pack` subcommand that writes a validated plugin to a
   `.hsplugin` archive.
+
+[Unreleased]: https://github.com/hearthsound/plugin-sdk/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/hearthsound/plugin-sdk/releases/tag/v0.1.0
