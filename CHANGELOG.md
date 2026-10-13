@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-13
+
 ### Added
 
 - The `metadata` and `acquisition` provider worlds in the new
@@ -35,5 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An `hsplugin pack` subcommand that writes a validated plugin to a
   `.hsplugin` archive.
 
-[Unreleased]: https://github.com/hearthsound/plugin-sdk/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/hearthsound/plugin-sdk/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/hearthsound/plugin-sdk/releases/tag/v0.1.1
 [0.1.0]: https://github.com/hearthsound/plugin-sdk/releases/tag/v0.1.0
