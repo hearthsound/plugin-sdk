@@ -19,9 +19,32 @@ const MANIFEST_SCHEMA: &str = include_str!("../../../schema/manifest.schema.json
 #[derive(Debug)]
 pub struct Checked {
     manifest: Manifest,
+    manifest_bytes: Vec<u8>,
+    manifest_dir: PathBuf,
+    wasm: PathBuf,
 }
 
 impl Checked {
+    /// Returns the validated manifest.
+    pub fn manifest(&self) -> &Manifest {
+        &self.manifest
+    }
+
+    /// Returns the exact bytes of the manifest file, as read from disk.
+    pub fn manifest_bytes(&self) -> &[u8] {
+        &self.manifest_bytes
+    }
+
+    /// Returns the directory the manifest lives in.
+    pub fn manifest_dir(&self) -> &Path {
+        &self.manifest_dir
+    }
+
+    /// Returns the path of the validated component.
+    pub fn wasm(&self) -> &Path {
+        &self.wasm
+    }
+
     /// Returns the one-line summary printed on success.
     ///
     /// The summary is `<id> <version> (provides <layers>)`.
@@ -84,7 +107,15 @@ pub fn run(manifest_path: &Path, wasm: Option<&Path>) -> Result<Checked, Vec<Str
     }
 
     if errors.is_empty() {
-        Ok(Checked { manifest })
+        Ok(Checked {
+            manifest,
+            manifest_bytes: bytes,
+            manifest_dir: manifest_path
+                .parent()
+                .unwrap_or(Path::new("."))
+                .to_path_buf(),
+            wasm: wasm_path,
+        })
     } else {
         Err(errors)
     }

@@ -16,3 +16,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The draft-07 plugin manifest schema at `schema/manifest.schema.json`.
 - The `hsplugin` CLI with a `check` subcommand that validates a manifest and
   the component rules of a compiled plugin.
+- An `hsplugin pack` subcommand that writes a validated plugin to a
+  `.hsplugin` archive.

@@ -122,3 +122,58 @@ fn invalid_id_is_rejected() {
     assert!(!output.status.success(), "hsplugin unexpectedly succeeded");
     assert!(stderr.contains("/id"), "unexpected stderr: {stderr}");
 }
+
+#[test]
+fn pack_writes_archive() {
+    let wasm = example_wasm();
+    let manifest = repo_root().join("examples/hello-catalog/manifest.json");
+    let out_dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("pack-out");
+    let output = hsplugin(&[
+        "pack",
+        "--manifest",
+        arg(&manifest),
+        "--wasm",
+        arg(wasm),
+        "--out-dir",
+        arg(&out_dir),
+    ]);
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "hsplugin pack failed: {stderr}");
+
+    let archive_path = out_dir.join("com.example.hello-catalog-0.1.0.hsplugin");
+    assert!(
+        archive_path.is_file(),
+        "archive missing at {}",
+        archive_path.display()
+    );
+
+    let file = std::fs::File::open(&archive_path).unwrap();
+    let mut archive = zip::ZipArchive::new(file).unwrap();
+
+    let mut names = Vec::new();
+    for index in 0..archive.len() {
+        names.push(archive.by_index(index).unwrap().name().unwrap().to_string());
+    }
+    assert!(
+        names.iter().any(|name| name == "manifest.json"),
+        "{names:?}"
+    );
+    assert!(names.iter().any(|name| name == "plugin.wasm"), "{names:?}");
+
+    let mut packed_wasm = Vec::new();
+    std::io::Read::read_to_end(
+        &mut archive.by_name("plugin.wasm").unwrap(),
+        &mut packed_wasm,
+    )
+    .unwrap();
+    assert_eq!(packed_wasm, std::fs::read(wasm).unwrap());
+
+    let mut packed_manifest = Vec::new();
+    std::io::Read::read_to_end(
+        &mut archive.by_name("manifest.json").unwrap(),
+        &mut packed_manifest,
+    )
+    .unwrap();
+    assert_eq!(packed_manifest, std::fs::read(&manifest).unwrap());
+}

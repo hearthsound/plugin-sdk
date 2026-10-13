@@ -20,5 +20,8 @@ toml.workspace = true
 wasmtime.workspace = true
 zip.workspace = true
 
+[dev-dependencies]
+zip.workspace = true
+
 [lints]
 workspace = true
