@@ -3,9 +3,12 @@ resolver = "3"
 members = [
     "crates/hearthsound-plugin",
     "crates/hearthsound-plugin-acquisition",
+    "crates/hearthsound-plugin-artwork",
     "crates/hearthsound-plugin-bindings",
+    "crates/hearthsound-plugin-catalog-artwork",
     "crates/hearthsound-plugin-cli",
     "crates/hearthsound-plugin-metadata",
+    "crates/hearthsound-plugin-metadata-artwork",
 ]
 exclude = ["examples/hello-catalog"]
 

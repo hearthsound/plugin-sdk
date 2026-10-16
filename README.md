@@ -3,7 +3,7 @@
 Interface definitions, a Rust SDK, and a packaging CLI for Hearthsound plugins.
 
 A Hearthsound plugin is a WebAssembly component that implements one or more of
-the server's provider layers (catalog, metadata, acquisition, and later artwork,
+the server's provider layers (catalog, metadata, artwork, acquisition, and later
 verification, scrobble, discovery, lyrics and playlist import). This repository
 is the single source of truth for the interface those components speak.
 
@@ -15,6 +15,9 @@ is the single source of truth for the interface those components speak.
 | `crates/hearthsound-plugin` | The Rust SDK a plugin depends on: the catalog provider world, host wrappers, the logging, config, HTTP and KV helpers, and the export macros. |
 | `crates/hearthsound-plugin-bindings` | The shared `types` and host-import bindings every provider world remaps to. |
 | `crates/hearthsound-plugin-metadata` | The metadata provider world. |
+| `crates/hearthsound-plugin-artwork` | The artwork provider world. |
+| `crates/hearthsound-plugin-metadata-artwork` | The metadata and artwork provider world. |
+| `crates/hearthsound-plugin-catalog-artwork` | The catalog and artwork provider world. |
 | `crates/hearthsound-plugin-acquisition` | The acquisition provider world. |
 | `crates/hearthsound-plugin-cli` | The `hsplugin` CLI: `check` and `pack`. |
 | `examples/hello-catalog` | A complete example plugin that answers every search with a greeting. |
@@ -35,16 +38,25 @@ One export macro per provider layer:
 ```rust,ignore
 hearthsound_plugin::export_catalog_provider!(MyCatalog);
 hearthsound_plugin::export_metadata_provider!(MyMetadata);
+hearthsound_plugin::export_artwork_provider!(MyArtwork);
 hearthsound_plugin::export_acquisition_provider!(MyAcquisition);
 ```
 
+A plugin that serves a layer alongside `artwork` uses the combined macro
+`export_metadata_artwork_provider!` or `export_catalog_artwork_provider!`
+instead, so one component serves both layers.
+
 A plugin implements the guest traits of the world it exports, which it finds
-under `hearthsound_plugin::catalog_provider`, `hearthsound_plugin::metadata_provider`
-and `hearthsound_plugin::acquisition_provider`; the shared `types`, host imports
-and helpers are the same for every world. The metadata and acquisition worlds
-live in their own crates because wit-bindgen allows one export macro per crate
-for worlds that share an exported interface, and this crate re-exports them, so
-a plugin still depends only on `hearthsound-plugin`.
+under `hearthsound_plugin::catalog_provider`,
+`hearthsound_plugin::metadata_provider`,
+`hearthsound_plugin::artwork_provider`,
+`hearthsound_plugin::metadata_artwork_provider`,
+`hearthsound_plugin::catalog_artwork_provider` and
+`hearthsound_plugin::acquisition_provider`; the shared `types`, host imports and
+helpers are the same for every world. Every world except the catalog one lives in
+its own crate because wit-bindgen allows one export macro per crate for worlds
+that share an exported interface, and this crate re-exports them, so a plugin
+still depends only on `hearthsound-plugin`.
 
 `hearthsound_plugin::host::files` is available to acquisition plugins, which use
 it to report the files they produced.

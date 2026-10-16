@@ -40,8 +40,11 @@ name = "hearthsound-plugin"
 version = "0.1.1"
 dependencies = [
  "hearthsound-plugin-acquisition",
+ "hearthsound-plugin-artwork",
  "hearthsound-plugin-bindings",
+ "hearthsound-plugin-catalog-artwork",
  "hearthsound-plugin-metadata",
+ "hearthsound-plugin-metadata-artwork",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -56,6 +59,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hearthsound-plugin-artwork"
+version = "0.1.1"
+dependencies = [
+ "hearthsound-plugin-bindings",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "hearthsound-plugin-bindings"
 version = "0.1.1"
 dependencies = [
@@ -63,7 +74,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "hearthsound-plugin-catalog-artwork"
+version = "0.1.1"
+dependencies = [
+ "hearthsound-plugin-bindings",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "hearthsound-plugin-metadata"
+version = "0.1.1"
+dependencies = [
+ "hearthsound-plugin-bindings",
+ "wit-bindgen",
+]
+
+[[package]]
+name = "hearthsound-plugin-metadata-artwork"
 version = "0.1.1"
 dependencies = [
  "hearthsound-plugin-bindings",

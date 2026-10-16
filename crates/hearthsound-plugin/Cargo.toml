@@ -9,8 +9,11 @@ repository.workspace = true
 
 [dependencies]
 hearthsound-plugin-acquisition = { path = "../hearthsound-plugin-acquisition" }
+hearthsound-plugin-artwork = { path = "../hearthsound-plugin-artwork" }
 hearthsound-plugin-bindings = { path = "../hearthsound-plugin-bindings" }
+hearthsound-plugin-catalog-artwork = { path = "../hearthsound-plugin-catalog-artwork" }
 hearthsound-plugin-metadata = { path = "../hearthsound-plugin-metadata" }
+hearthsound-plugin-metadata-artwork = { path = "../hearthsound-plugin-metadata-artwork" }
 wit-bindgen.workspace = true
 serde.workspace = true
 serde_json.workspace = true

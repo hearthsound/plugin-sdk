@@ -39,7 +39,7 @@ const WASI_PACKAGES: [&str; 6] = [
 ];
 
 /// Provider interfaces a component may export, mapped to manifest layers.
-const CAPABILITY_INTERFACES: [&str; 3] = ["catalog", "metadata", "acquisition"];
+const CAPABILITY_INTERFACES: [&str; 4] = ["catalog", "metadata", "artwork", "acquisition"];
 
 /// The interface every plugin must export.
 const LIFECYCLE_INTERFACE: &str = "lifecycle";
@@ -160,4 +160,92 @@ fn import_allowed(interface: &str, version: &str, provides: &[String]) -> bool {
 /// The plugin API version supported by this tool.
 pub fn supported_api() -> &'static str {
     SUPPORTED_API
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Compiles a component exporting `exports` and one empty instance behind
+    /// each of them.
+    ///
+    /// The component rules read the export names and versions and never the
+    /// shape of an exported interface, so an empty instance is enough to drive
+    /// them.
+    fn component(engine: &Engine, exports: &[&str]) -> Component {
+        let mut wat = String::from("(component\n  (instance $empty)\n");
+        for name in exports {
+            wat.push_str(&format!("  (export \"{name}\" (instance $empty))\n"));
+        }
+        wat.push_str(")\n");
+        match Component::new(engine, wat) {
+            Ok(component) => component,
+            Err(error) => panic!("the test component compiles: {error}"),
+        }
+    }
+
+    /// Returns the errors `check` reports for a component and a layer list.
+    fn errors(component: &Component, provides: &[&str]) -> Vec<String> {
+        let engine = Engine::default();
+        let provides: Vec<String> = provides.iter().map(|layer| layer.to_string()).collect();
+        let mut errors = Vec::new();
+        check(&engine, component, &provides, &mut errors);
+        errors
+    }
+
+    /// An `artwork` export satisfies a manifest that provides the layer.
+    #[test]
+    fn an_artwork_export_passes_when_the_manifest_provides_it() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &[
+                "hearthsound:plugin/lifecycle@0.2.0",
+                "hearthsound:plugin/artwork@0.2.0",
+            ],
+        );
+        let errors = errors(&component, &["artwork"]);
+        assert!(errors.is_empty(), "{errors:?}");
+    }
+
+    /// An `artwork` export without the layer in the manifest is rejected.
+    #[test]
+    fn an_artwork_export_needs_the_manifest_layer() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &[
+                "hearthsound:plugin/lifecycle@0.2.0",
+                "hearthsound:plugin/artwork@0.2.0",
+            ],
+        );
+        let errors = errors(&component, &[]);
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.contains("does not declare the `artwork` layer")),
+            "{errors:?}"
+        );
+    }
+
+    /// An `artwork` export of another API version is not an interface the
+    /// server knows.
+    #[test]
+    fn an_artwork_export_of_another_version_is_rejected() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &[
+                "hearthsound:plugin/lifecycle@0.2.0",
+                "hearthsound:plugin/artwork@0.1.0",
+            ],
+        );
+        let errors = errors(&component, &["artwork"]);
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.contains("is not a supported hearthsound:plugin interface")),
+            "{errors:?}"
+        );
+    }
 }

@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and portraits for artists.
 - The `get-artist-info` function on the `metadata` interface with the
   `artist-info-request`, `artist-link` and `artist-info` records.
+- The `hearthsound-plugin-artwork` crate, which generates the `artwork` provider
+  world and the `export_artwork_provider!` macro.
+- The `hearthsound-plugin-metadata-artwork` and
+  `hearthsound-plugin-catalog-artwork` crates, whose worlds serve `metadata` or
+  `catalog` alongside `artwork`, with the `export_metadata_artwork_provider!`
+  and `export_catalog_artwork_provider!` macros.
+- `artwork` as a layer `hsplugin check` accepts, so a component exporting the
+  interface satisfies a manifest that provides the layer.
 
 ### Changed
 

@@ -15,9 +15,17 @@
 //!   for the `catalog` layer.
 //! - [`metadata_provider`] and [`export_metadata_provider!`](crate::export_metadata_provider)
 //!   for the `metadata` layer.
+//! - [`artwork_provider`] and [`export_artwork_provider!`](crate::export_artwork_provider)
+//!   for the `artwork` layer: cover images for albums and portraits for
+//!   artists.
 //! - [`acquisition_provider`] and [`export_acquisition_provider!`](crate::export_acquisition_provider)
 //!   for the `acquisition` layer, the only one that also imports
 //!   [`host::files`].
+//! - [`catalog_artwork_provider`] and
+//!   [`export_catalog_artwork_provider!`](crate::export_catalog_artwork_provider),
+//!   and [`metadata_artwork_provider`] and
+//!   [`export_metadata_artwork_provider!`](crate::export_metadata_artwork_provider),
+//!   for plugins that serve a second layer alongside `artwork`.
 //!
 //! The shared [`types`] module and the [`host`] imports are generated once in
 //! `hearthsound-plugin-bindings`, and every world remaps its imports there, so a
@@ -35,6 +43,9 @@
 //! |---|---|
 //! | `hearthsound-plugin-bindings` | The `types` interface, the host imports and `host-files` |
 //! | `hearthsound-plugin-metadata` | The `metadata` provider world |
+//! | `hearthsound-plugin-artwork` | The `artwork` provider world |
+//! | `hearthsound-plugin-metadata-artwork` | The `metadata` and `artwork` provider world |
+//! | `hearthsound-plugin-catalog-artwork` | The `catalog` and `artwork` provider world |
 //! | `hearthsound-plugin-acquisition` | The `acquisition` provider world |
 //! | `hearthsound-plugin` | The `catalog` provider world, host wrappers, config and logging helpers, and the log macros |
 //!
@@ -165,6 +176,96 @@ pub use hearthsound_plugin_metadata::metadata_provider;
 /// ```
 #[doc(inline)]
 pub use metadata_provider::export_metadata_provider;
+
+/// The artwork provider world and its export macro.
+///
+/// The generated module tree contains the guest traits an artwork plugin
+/// implements under `exports::hearthsound::plugin::{artwork, lifecycle}`, plus
+/// the [`export_artwork_provider!`](crate::export_artwork_provider) macro that
+/// wires a type implementing them into the component's exports. The `artwork`
+/// layer answers cover images for albums and portraits for artists.
+#[doc(inline)]
+pub use hearthsound_plugin_artwork::artwork_provider;
+
+/// Wires an artwork provider into the component's exports.
+///
+/// Pass a type that implements the
+/// `artwork_provider::exports::hearthsound::plugin::lifecycle::Guest` and
+/// `artwork_provider::exports::hearthsound::plugin::artwork::Guest` traits. The
+/// macro expands to the `#[unsafe(no_mangle)]` entry points the component model
+/// expects.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyArtwork;
+/// // impl ...::lifecycle::Guest for MyArtwork {}
+/// // impl ...::artwork::Guest for MyArtwork {}
+///
+/// hearthsound_plugin::export_artwork_provider!(MyArtwork);
+/// ```
+#[doc(inline)]
+pub use artwork_provider::export_artwork_provider;
+
+/// The metadata and artwork provider world and its export macro.
+///
+/// The generated module tree contains the guest traits a plugin that serves
+/// both layers implements under
+/// `exports::hearthsound::plugin::{metadata, artwork, lifecycle}`, plus the
+/// [`export_metadata_artwork_provider!`](crate::export_metadata_artwork_provider)
+/// macro that wires a type implementing them into the component's exports.
+#[doc(inline)]
+pub use hearthsound_plugin_metadata_artwork::metadata_artwork_provider;
+
+/// Wires a metadata and artwork provider into the component's exports.
+///
+/// Pass a type that implements the
+/// `metadata_artwork_provider::exports::hearthsound::plugin::lifecycle::Guest`,
+/// `...::metadata::Guest` and `...::artwork::Guest` traits. The macro expands to
+/// the `#[unsafe(no_mangle)]` entry points the component model expects.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyMetadataArtwork;
+/// // impl ...::lifecycle::Guest for MyMetadataArtwork {}
+/// // impl ...::metadata::Guest for MyMetadataArtwork {}
+/// // impl ...::artwork::Guest for MyMetadataArtwork {}
+///
+/// hearthsound_plugin::export_metadata_artwork_provider!(MyMetadataArtwork);
+/// ```
+#[doc(inline)]
+pub use metadata_artwork_provider::export_metadata_artwork_provider;
+
+/// The catalog and artwork provider world and its export macro.
+///
+/// The generated module tree contains the guest traits a plugin that serves
+/// both layers implements under
+/// `exports::hearthsound::plugin::{catalog, artwork, lifecycle}`, plus the
+/// [`export_catalog_artwork_provider!`](crate::export_catalog_artwork_provider)
+/// macro that wires a type implementing them into the component's exports.
+#[doc(inline)]
+pub use hearthsound_plugin_catalog_artwork::catalog_artwork_provider;
+
+/// Wires a catalog and artwork provider into the component's exports.
+///
+/// Pass a type that implements the
+/// `catalog_artwork_provider::exports::hearthsound::plugin::lifecycle::Guest`,
+/// `...::catalog::Guest` and `...::artwork::Guest` traits. The macro expands to
+/// the `#[unsafe(no_mangle)]` entry points the component model expects.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyCatalogArtwork;
+/// // impl ...::lifecycle::Guest for MyCatalogArtwork {}
+/// // impl ...::catalog::Guest for MyCatalogArtwork {}
+/// // impl ...::artwork::Guest for MyCatalogArtwork {}
+///
+/// hearthsound_plugin::export_catalog_artwork_provider!(MyCatalogArtwork);
+/// ```
+#[doc(inline)]
+pub use catalog_artwork_provider::export_catalog_artwork_provider;
 
 /// The acquisition provider world and its export macro.
 ///
