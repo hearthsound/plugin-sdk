@@ -28,7 +28,7 @@ Add the SDK as a dependency and export a provider:
 
 ```toml
 [dependencies]
-hearthsound-plugin = { git = "https://github.com/hearthsound/plugin-sdk", tag = "v0.1.1" }
+hearthsound-plugin = { git = "https://github.com/hearthsound/plugin-sdk", tag = "v0.2.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ```
