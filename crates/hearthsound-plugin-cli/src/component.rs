@@ -11,7 +11,7 @@ use wasmtime::component::Component;
 use wasmtime::component::types::ComponentItem;
 
 /// Version of the `hearthsound:plugin` package every plugin targets.
-const API_VERSION: &str = "0.1.0";
+const API_VERSION: &str = "0.2.0";
 
 /// Host interfaces every plugin may import.
 const COMMON_HOST_INTERFACES: [&str; 5] = [
@@ -26,7 +26,7 @@ const COMMON_HOST_INTERFACES: [&str; 5] = [
 const HOST_FILES: &str = "hearthsound:plugin/host-files";
 
 /// The supported plugin API version, as it appears in a manifest.
-const SUPPORTED_API: &str = "hearthsound:plugin@0.1.0";
+const SUPPORTED_API: &str = "hearthsound:plugin@0.2.0";
 
 /// WASI packages plugins may import, provided by `wasmtime-wasi`.
 const WASI_PACKAGES: [&str; 6] = [

@@ -11,7 +11,7 @@ is the single source of truth for the interface those components speak.
 
 | Path | Contents |
 |---|---|
-| `wit/` | The `hearthsound:plugin@0.1.0` WIT package. |
+| `wit/` | The `hearthsound:plugin@0.2.0` WIT package. |
 | `crates/hearthsound-plugin` | The Rust SDK a plugin depends on: the catalog provider world, host wrappers, the logging, config, HTTP and KV helpers, and the export macros. |
 | `crates/hearthsound-plugin-bindings` | The shared `types` and host-import bindings every provider world remaps to. |
 | `crates/hearthsound-plugin-metadata` | The metadata provider world. |

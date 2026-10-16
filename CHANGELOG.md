@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The `artwork` provider interface, its `artwork-subject` record and the
+  `artwork-provider` world a plugin exports to resolve cover images for albums
+  and portraits for artists.
+- The `get-artist-info` function on the `metadata` interface with the
+  `artist-info-request`, `artist-link` and `artist-info` records.
+
+### Changed
+
+- The WIT package version is now `0.2.0`, so the API string a manifest declares
+  and a component is checked against is `hearthsound:plugin@0.2.0`.
+
 ## [0.1.1] - 2026-10-13
 
 ### Added

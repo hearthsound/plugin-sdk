@@ -1,4 +1,4 @@
-//! The metadata provider world of the `hearthsound:plugin@0.1.0` WIT package.
+//! The metadata provider world of the `hearthsound:plugin@0.2.0` WIT package.
 //!
 //! A metadata plugin implements the guest traits generated in
 //! [`metadata_provider`] and hands its type to the export macro; plugins depend
@@ -27,11 +27,11 @@ pub mod metadata_provider {
         path: "../../wit",
         world: "hearthsound:plugin/metadata-provider",
         with: {
-            "hearthsound:plugin/types@0.1.0": hearthsound_plugin_bindings::types,
-            "hearthsound:plugin/host-log@0.1.0": hearthsound_plugin_bindings::host::log,
-            "hearthsound:plugin/host-http@0.1.0": hearthsound_plugin_bindings::host::http,
-            "hearthsound:plugin/host-kv@0.1.0": hearthsound_plugin_bindings::host::kv,
-            "hearthsound:plugin/host-config@0.1.0": hearthsound_plugin_bindings::host::config,
+            "hearthsound:plugin/types@0.2.0": hearthsound_plugin_bindings::types,
+            "hearthsound:plugin/host-log@0.2.0": hearthsound_plugin_bindings::host::log,
+            "hearthsound:plugin/host-http@0.2.0": hearthsound_plugin_bindings::host::http,
+            "hearthsound:plugin/host-kv@0.2.0": hearthsound_plugin_bindings::host::kv,
+            "hearthsound:plugin/host-config@0.2.0": hearthsound_plugin_bindings::host::config,
         },
         generate_all,
         pub_export_macro: true,

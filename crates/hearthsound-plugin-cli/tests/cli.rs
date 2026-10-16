@@ -83,7 +83,7 @@ fn example_manifest_is_valid() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.starts_with("ok: com.example.hello-catalog 0.1.0"),
+        stdout.starts_with("ok: com.example.hello-catalog 0.2.0"),
         "unexpected stdout: {stdout}"
     );
 }
@@ -102,7 +102,7 @@ fn mismatched_layer_is_rejected() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(!output.status.success(), "hsplugin unexpectedly succeeded");
     assert!(
-        stderr.contains("hearthsound:plugin/metadata@0.1.0"),
+        stderr.contains("hearthsound:plugin/metadata@0.2.0"),
         "unexpected stderr: {stderr}"
     );
 }
@@ -141,7 +141,7 @@ fn pack_writes_archive() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(output.status.success(), "hsplugin pack failed: {stderr}");
 
-    let archive_path = out_dir.join("com.example.hello-catalog-0.1.0.hsplugin");
+    let archive_path = out_dir.join("com.example.hello-catalog-0.2.0.hsplugin");
     assert!(
         archive_path.is_file(),
         "archive missing at {}",
