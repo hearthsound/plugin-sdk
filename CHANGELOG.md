@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   language template, from a local directory or a git URL via `--template`,
   rewriting the manifest's `id`, `name` and `version` and refusing a non-empty
   destination.
+- `hsplugin build` compiles a plugin with the toolchain its project uses (cargo,
+  TinyGo, npm, componentize-py or `dotnet publish`); non-Rust components are
+  written to `build/plugin.wasm`, which `check` and `pack` find without
+  `--wasm`.
 
 ## [0.2.0] - 2026-10-16
 

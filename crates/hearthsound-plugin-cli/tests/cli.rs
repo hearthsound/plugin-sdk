@@ -355,3 +355,30 @@ fn new_leaves_no_destination_when_the_template_has_no_manifest() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("manifest.json"));
     assert!(!out.exists());
 }
+
+#[test]
+fn build_compiles_a_rust_project() {
+    let target = Path::new(env!("CARGO_TARGET_TMPDIR")).join("hello");
+    let output = Command::new(HSPLUGIN)
+        .arg("build")
+        .arg("--manifest")
+        .arg(repo_root().join("examples/hello-catalog/manifest.json"))
+        .env("CARGO_TARGET_DIR", &target)
+        .output()
+        .expect("hsplugin runs");
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        format!("built {}", example_wasm().display())
+    );
+}
+
+#[test]
+fn build_refuses_a_project_without_a_marker() {
+    let dir = out_dir("build-no-marker");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("manifest.json"), "{}").unwrap();
+    let output = hsplugin(&["build", "--manifest", arg(&dir.join("manifest.json"))]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("no Cargo.toml"));
+}

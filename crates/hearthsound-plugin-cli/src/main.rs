@@ -1,16 +1,20 @@
-//! `hsplugin`: scaffold, validate and package Hearthsound plugin components.
+//! `hsplugin`: scaffold, build, validate and package Hearthsound plugin
+//! components.
 //!
 //! `hsplugin new` copies a language template into a new directory with the
-//! manifest's identity fields rewritten. `hsplugin check` validates a
-//! `manifest.json` against the plugin manifest schema and type-checks the
-//! compiled WebAssembly component against the component rules. `hsplugin pack`
-//! runs the same checks and then writes a `.hsplugin` archive.
+//! manifest's identity fields rewritten. `hsplugin build` compiles the plugin
+//! with the toolchain its project uses (cargo, TinyGo, npm, componentize-py or
+//! `dotnet publish`). `hsplugin check` validates a `manifest.json` against the
+//! plugin manifest schema and type-checks the compiled WebAssembly component
+//! against the component rules. `hsplugin pack` runs the same checks and then
+//! writes a `.hsplugin` archive.
 //!
-//! `new` prints `created <path>`, `check` prints `ok: ...` and `pack` prints
-//! `packed <path>` on stdout; each exits 0 on success. On failure every
-//! problem goes to stderr, each prefixed with `error: `, and the exit status
-//! is 1.
+//! `new` prints `created <path>`, `build` prints `built <path>`, `check` prints
+//! `ok: ...` and `pack` prints `packed <path>` on stdout; each exits 0 on
+//! success. On failure every problem goes to stderr, each prefixed with
+//! `error: `, and the exit status is 1.
 
+mod build;
 mod check;
 mod component;
 mod manifest;
@@ -27,7 +31,7 @@ use clap::{Args, Parser, Subcommand};
 #[command(
     name = "hsplugin",
     version,
-    about = "Scaffold, check and pack Hearthsound plugin components"
+    about = "Scaffold, build, check and pack Hearthsound plugin components"
 )]
 struct Cli {
     /// Subcommand to run.
@@ -40,6 +44,8 @@ struct Cli {
 enum Command {
     /// Create a plugin project from a language template.
     New(NewArgs),
+    /// Compile the plugin with the toolchain its project uses.
+    Build(BuildArgs),
     /// Validate a plugin manifest and its WebAssembly component.
     Check(CheckArgs),
     /// Validate a plugin, then write it to a `.hsplugin` archive.
@@ -69,6 +75,14 @@ struct NewArgs {
     /// template for the language.
     #[arg(long)]
     template: Option<String>,
+}
+
+/// Arguments of `hsplugin build`.
+#[derive(Debug, Args)]
+struct BuildArgs {
+    /// Path to the plugin's `manifest.json`.
+    #[arg(long, default_value = "manifest.json")]
+    manifest: PathBuf,
 }
 
 /// Arguments of `hsplugin check`.
@@ -117,6 +131,10 @@ fn main() {
                 Err(error) => fail(&[error]),
             }
         }
+        Command::Build(args) => match build::run(&args.manifest) {
+            Ok(path) => println!("built {}", path.display()),
+            Err(error) => fail(&[error]),
+        },
         Command::Check(args) => match check::run(&args.manifest, args.wasm.as_deref()) {
             Ok(checked) => println!("ok: {}", checked.summary()),
             Err(errors) => fail(&errors),

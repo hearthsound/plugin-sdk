@@ -178,22 +178,60 @@ fn check_config_schemas(instance: &Value, errors: &mut Vec<String>) {
     }
 }
 
-/// Derives the component path from the manifest's directory.
+/// Locates the component that `check` and `pack` read when no `--wasm` is
+/// given.
 ///
-/// The component is expected at
-/// `<manifest dir>/<target dir>/wasm32-wasip2/release/<package name>.wasm`,
-/// where `<target dir>` is `CARGO_TARGET_DIR` when set and `target` otherwise,
-/// and the package name comes from the `package.name` of the `Cargo.toml` next
-/// to the manifest.
+/// Two candidates are tried in order. A Rust project (a `Cargo.toml` next to
+/// the manifest) yields the `wasm32-wasip2` release artifact, see
+/// [`cargo_artifact`]. Every project also yields `build/plugin.wasm`, the path
+/// non-Rust builds write to. The first candidate that exists wins.
+///
+/// # Parameters
+///
+/// - `manifest_path`: path to the plugin's `manifest.json`.
+///
+/// # Returns
+///
+/// The path of the first existing candidate.
 ///
 /// # Errors
 ///
-/// Returns a message when the `Cargo.toml` cannot be read or parsed, when it
-/// has no `package.name`, or when the component file does not exist.
-fn resolve_wasm(manifest_path: &Path) -> Result<PathBuf, String> {
+/// Returns a message when a Rust project's `Cargo.toml` cannot be read or
+/// parsed or has no `package.name`, or when neither candidate exists.
+pub(crate) fn resolve_wasm(manifest_path: &Path) -> Result<PathBuf, String> {
     let manifest_dir = manifest_path.parent().unwrap_or(Path::new("."));
+    let mut candidates = Vec::new();
     let cargo_toml = manifest_dir.join("Cargo.toml");
-    let text = std::fs::read_to_string(&cargo_toml)
+    if cargo_toml.is_file() {
+        candidates.push(cargo_artifact(manifest_dir, &cargo_toml)?);
+    }
+    candidates.push(manifest_dir.join("build").join("plugin.wasm"));
+    if let Some(found) = candidates.iter().find(|path| path.is_file()) {
+        return Ok(found.clone());
+    }
+    let looked: Vec<String> = candidates
+        .iter()
+        .map(|path| path.display().to_string())
+        .collect();
+    Err(format!(
+        "component not found; looked at {}; build it with `hsplugin build` or pass --wasm",
+        looked.join(", ")
+    ))
+}
+
+/// Derives the cargo release artifact path for the package in `cargo_toml`.
+///
+/// The artifact is `<target dir>/wasm32-wasip2/release/<package name>.wasm`,
+/// where `<target dir>` is `CARGO_TARGET_DIR` when set (relative paths resolve
+/// against `manifest_dir`) and `target` otherwise, and the package name is the
+/// `package.name` of `cargo_toml` with dashes replaced by underscores.
+///
+/// # Errors
+///
+/// Returns a message when `cargo_toml` cannot be read or parsed or has no
+/// `package.name`.
+fn cargo_artifact(manifest_dir: &Path, cargo_toml: &Path) -> Result<PathBuf, String> {
+    let text = std::fs::read_to_string(cargo_toml)
         .map_err(|error| format!("{}: {error}", cargo_toml.display()))?;
     let value: toml::Value =
         toml::from_str(&text).map_err(|error| format!("{}: {error}", cargo_toml.display()))?;
@@ -215,16 +253,7 @@ fn resolve_wasm(manifest_path: &Path) -> Result<PathBuf, String> {
         None => manifest_dir.join("target"),
     };
     let file = format!("{}.wasm", name.replace('-', "_"));
-    let path = target_dir.join("wasm32-wasip2").join("release").join(file);
-
-    if path.is_file() {
-        Ok(path)
-    } else {
-        Err(format!(
-            "component not found at {}; build it with cargo build --release --target wasm32-wasip2 or pass --wasm",
-            path.display()
-        ))
-    }
+    Ok(target_dir.join("wasm32-wasip2").join("release").join(file))
 }
 
 /// Renders an empty JSON pointer as `/`.
