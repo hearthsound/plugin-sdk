@@ -37,7 +37,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hearthsound-plugin-acquisition",
  "hearthsound-plugin-artwork",
@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-acquisition"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -60,7 +60,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-artwork"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -68,14 +68,14 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-bindings"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "wit-bindgen",
 ]
 
 [[package]]
 name = "hearthsound-plugin-catalog-artwork"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -83,7 +83,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-metadata"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -91,7 +91,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-metadata-artwork"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
