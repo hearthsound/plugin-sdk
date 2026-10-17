@@ -19,7 +19,7 @@ is the single source of truth for the interface those components speak.
 | `crates/hearthsound-plugin-metadata-artwork` | The metadata and artwork provider world. |
 | `crates/hearthsound-plugin-catalog-artwork` | The catalog and artwork provider world. |
 | `crates/hearthsound-plugin-acquisition` | The acquisition provider world. |
-| `crates/hearthsound-plugin-cli` | The `hsplugin` CLI: `check` and `pack`. |
+| `crates/hearthsound-plugin-cli` | The `hsplugin` CLI: `new`, `build`, `check`, `pack`, `run` and `test`. |
 | `examples/hello-catalog` | A complete example plugin that answers every search with a greeting. |
 
 ## Using the SDK
@@ -70,6 +70,134 @@ hsplugin pack --out-dir dist
 ```
 
 See `hearthsound/plugin-template-rust` for a ready-to-fork project.
+
+## The `hsplugin` CLI
+
+`hsplugin` creates, builds, checks, packages, runs and tests a plugin. Install
+the repository head with:
+
+```console
+cargo install --git https://github.com/hearthsound/plugin-sdk hearthsound-plugin-cli
+```
+
+Every command takes `--manifest <PATH>` (default `manifest.json`). Commands that
+read the component take `--wasm <PATH>`; without it they use the release build
+output: `build/plugin.wasm` for non-Rust projects, and the cargo output under
+`target/wasm32-wasip2/release/` for Rust. A failing command prints
+`error: <message>` to stderr and exits 1.
+
+### `new`
+
+```console
+hsplugin new --lang rust --id com.example.my-plugin --name "My plugin" --out my-plugin
+```
+
+Copies the template for `--lang rust|go|js|python|csharp` from the official
+`hearthsound/plugin-template-<lang>` repository, or from `--template <DIR|URL>`
+(a local directory, or a git URL cloned at depth 1). It drops `.git`, rewrites
+`id`, `name` and `version` (`1.0.0`) in `manifest.json`, and refuses a non-empty
+destination. `--id` defaults to `com.example.my-plugin`; `--out` defaults to a
+directory named after the id.
+
+### `build`
+
+```console
+hsplugin build --manifest manifest.json
+```
+
+Chooses the toolchain from the marker file in the project directory:
+`Cargo.toml` runs `cargo build --release --target wasm32-wasip2`; `go.mod` runs
+`go generate` and then TinyGo with `-target=wasip2`; `package.json` runs
+`npm install` and `npm run build`; `pyproject.toml` runs `componentize-py`; a
+`*.csproj` runs `dotnet publish -c Release`. The non-Rust builds write
+`build/plugin.wasm`.
+
+### `check`
+
+Validates the manifest and the component it names, then prints
+`ok: <id> <version> (provides <layers>)`.
+
+### `pack`
+
+```console
+hsplugin pack --out-dir dist
+```
+
+Runs the `check` validation, then writes `<id>-<version>.hsplugin` into
+`--out-dir` (default `.`) and prints `packed <path>`.
+
+### `run`
+
+```console
+hsplugin run catalog.search --input search.json --config config.json
+```
+
+Calls one function, named `<capability>.<function>` with the WIT names, through
+the mock host. The capabilities are `catalog`, `metadata`, `artwork`,
+`acquisition` and `lifecycle`.
+
+Input (`--input`, a JSON file): zero-argument functions need no file. A
+single-argument function takes the argument's JSON value directly, a string
+such as `"hello-track-1"` for `catalog.get-track` or a record object for
+`catalog.search`. A function with several arguments takes an object keyed by
+parameter name, in snake_case or WIT kebab-case, for example
+`{"id": "hello-artist-1", "limit": 1, "offset": 0}` for `catalog.artist-albums`.
+`catalog.search` takes `{"text": "hello", "kinds": ["track"], "limit": 5, "offset": 0}`;
+an empty `kinds` list means every kind.
+
+Output: one JSON value on stdout. A call that returns a value prints
+`{"ok": <result>}`, and a provider error prints `{"error": <variant>}`.
+Unit variants are snake_case strings (`"not_found"`); variants with a payload
+are one-key objects (`{"rate_limited": 30}`, `{"invalid_config": "..."}`);
+`option` `none` is `null`; records use snake_case keys.
+
+The mock host applies the same limits a server would: a 30 second call
+deadline; no sockets and no preopened directories; `host-files` rooted at a
+temporary staging directory; a key-value store of 256 KiB per value with a
+1 MiB default quota; and HTTP only to hosts in the manifest allowlist (an exact
+host, `*.domain`, or a host named by `$config:<field>`), with a 10 second
+default timeout capped at 60 seconds, at most 5 redirects and a 10 MiB body cap.
+`server-config()` is the `--config` document with the manifest schema defaults
+filled in. The mock host is an independent implementation of these limits, not
+the server runtime, so a passing run is evidence rather than a guarantee.
+
+### `test`
+
+```console
+hsplugin test catalog --manifest manifest.json --config config.json
+```
+
+Runs a layer's conformance suite against the built component through the mock
+host. The layer is `catalog`, `metadata`, `artwork` or `acquisition`. Each check
+prints one line, `ok <n>: <check>` or `error <n>: <check>: <detail>`, in order.
+The command exits 0 when every check passes and 1 otherwise. A layer the
+component does not export fails each of its checks with
+`component does not export ...`.
+
+Checks, by suite:
+
+- `catalog` (12 checks): `validate-config` accepts the config; it rejects
+ invalid JSON with a non-empty list; `health` returns a string; `search`
+ returns track, album and artist lists; `get-track`, `get-album` and
+ `get-artist` return each id the search produced; `artist-albums` respects
+ `limit` and `offset`; `artist-top-tracks` respects `limit`; `get-track` reports
+ `not-found` for an unknown id; `lookup-isrc` returns a list or `not-found`; a
+ search with `limit` 0 returns empty lists.
+- `metadata` (2 checks): `resolve-recording` on a generic hint returns a list or
+ a known error (`not-found`, `invalid-config`); `get-artist-info` returns a
+ result, and none is allowed.
+- `artwork` (4 checks): `find-artwork` for track, album and artist subjects
+ returns a list or `not-found`; a playlist subject returns an empty list.
+- `acquisition` (4 checks): `get-capabilities` lists granularities;
+ `start-search` on a generic track query returns a token; `poll-search` reaches
+ `complete` or a provider error within 30 seconds, where a provider error is the
+ failed state because the 0.2.0 `search-state` has no failed variant; an unknown
+ token is answered with a provider error.
+
+The acquisition suite is compiled and clippy-checked but not verified against a
+plugin: no fixture in this repository exports the acquisition layer, and none
+was added for it. Its results are unverified until a real acquisition plugin
+runs it.
 
 ## License
 
