@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `hsplugin new --lang rust|go|js|python|csharp` scaffolds a plugin from the
+  language template, from a local directory or a git URL via `--template`,
+  rewriting the manifest's `id`, `name` and `version` and refusing a non-empty
+  destination.
+
 ## [0.2.0] - 2026-10-16
 
 ### Added

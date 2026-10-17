@@ -177,3 +177,181 @@ fn pack_writes_archive() {
     .unwrap();
     assert_eq!(packed_manifest, std::fs::read(&manifest).unwrap());
 }
+
+/// Writes a small template tree under `CARGO_TARGET_TMPDIR` and returns its path.
+///
+/// The tree holds a manifest with keys out of canonical order and one source
+/// file, and a stale `target` build directory; callers add a `.git` entry when they need one.
+fn template_dir(name: &str) -> PathBuf {
+    let dir = out_dir(name);
+    std::fs::create_dir_all(dir.join("src")).unwrap();
+    std::fs::create_dir_all(dir.join("target/debug")).unwrap();
+    std::fs::write(dir.join("target/debug/stale.wasm"), "stale").unwrap();
+    std::fs::write(dir.join("src/lib.rs"), "// template\n").unwrap();
+    std::fs::write(
+        dir.join("manifest.json"),
+        r#"{"zeta": 1, "id": "com.example.template", "name": "Template", "version": "0.1.0", "alpha": 2}"#,
+    )
+    .unwrap();
+    dir
+}
+
+/// Returns a fresh, absent directory under `CARGO_TARGET_TMPDIR`.
+fn out_dir(name: &str) -> PathBuf {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _ = std::fs::remove_dir_all(&dir);
+    dir
+}
+
+/// Runs `hsplugin new` with `args`.
+fn new_plugin(args: &[&str]) -> Output {
+    Command::new(HSPLUGIN)
+        .arg("new")
+        .args(args)
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn new_copies_template_and_rewrites_manifest() {
+    let template = template_dir("new-template");
+    std::fs::create_dir_all(template.join(".git")).unwrap();
+    let out = out_dir("new-copy");
+    let output = new_plugin(&[
+        "--lang",
+        "rust",
+        "--template",
+        arg(&template),
+        "--out",
+        arg(&out),
+        "--id",
+        "com.example.scratch",
+        "--name",
+        "Scratch",
+    ]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(out.join("src/lib.rs").is_file());
+    assert!(!out.join(".git").exists());
+    assert!(!out.join("target").exists());
+
+    let text = std::fs::read_to_string(out.join("manifest.json")).unwrap();
+    let manifest: serde_json::Value = serde_json::from_str(&text).unwrap();
+    assert_eq!(manifest["id"], "com.example.scratch");
+    assert_eq!(manifest["name"], "Scratch");
+    assert_eq!(manifest["version"], "1.0.0");
+    let keys: Vec<&str> = manifest
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    assert_eq!(keys, ["zeta", "id", "name", "version", "alpha"]);
+}
+
+#[test]
+fn new_clones_git_template_url() {
+    let template = template_dir("new-git-template");
+    let git = |args: &[&str]| {
+        let status = Command::new("git")
+            .current_dir(&template)
+            .args(["-c", "user.name=test", "-c", "user.email=test@example.com"])
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(status.status.success(), "git {args:?} failed");
+    };
+    git(&["init", "-q"]);
+    git(&["add", "-A"]);
+    git(&["commit", "-q", "-m", "template"]);
+
+    let out = out_dir("new-git-copy");
+    let url = format!("file://{}", arg(&template));
+    let output = new_plugin(&[
+        "--lang",
+        "go",
+        "--template",
+        &url,
+        "--out",
+        arg(&out),
+        "--id",
+        "com.example.cloned",
+        "--name",
+        "Cloned",
+    ]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(out.join("src/lib.rs").is_file());
+    assert!(!out.join(".git").exists());
+    let text = std::fs::read_to_string(out.join("manifest.json")).unwrap();
+    let manifest: serde_json::Value = serde_json::from_str(&text).unwrap();
+    assert_eq!(manifest["id"], "com.example.cloned");
+    assert_eq!(manifest["version"], "1.0.0");
+}
+
+#[test]
+fn new_refuses_a_non_empty_destination() {
+    let template = template_dir("new-busy-template");
+    let out = out_dir("new-busy");
+    std::fs::create_dir_all(&out).unwrap();
+    std::fs::write(out.join("keep.txt"), "mine").unwrap();
+    let output = new_plugin(&[
+        "--lang",
+        "rust",
+        "--template",
+        arg(&template),
+        "--out",
+        arg(&out),
+    ]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("not empty"));
+    assert_eq!(
+        std::fs::read_to_string(out.join("keep.txt")).unwrap(),
+        "mine"
+    );
+    assert!(!out.join("manifest.json").exists());
+}
+
+#[test]
+fn new_refuses_an_invalid_id() {
+    let template = template_dir("new-badid-template");
+    let out = out_dir("new-badid");
+    let output = new_plugin(&[
+        "--lang",
+        "rust",
+        "--template",
+        arg(&template),
+        "--out",
+        arg(&out),
+        "--id",
+        "Bad_ID",
+    ]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("not a valid plugin id"));
+    assert!(!out.exists());
+}
+
+#[test]
+fn new_leaves_no_destination_when_the_template_has_no_manifest() {
+    let template = out_dir("new-empty-template");
+    std::fs::create_dir_all(&template).unwrap();
+    std::fs::write(template.join("README.md"), "no manifest here\n").unwrap();
+    let out = out_dir("new-no-manifest");
+    let output = new_plugin(&[
+        "--lang",
+        "js",
+        "--template",
+        arg(&template),
+        "--out",
+        arg(&out),
+    ]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("manifest.json"));
+    assert!(!out.exists());
+}
