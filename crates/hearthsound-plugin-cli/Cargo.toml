@@ -18,6 +18,8 @@ jsonschema.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
 toml.workspace = true
 wasmtime.workspace = true
+reqwest.workspace = true
+wasmtime-wasi.workspace = true
 zip.workspace = true
 
 [dev-dependencies]

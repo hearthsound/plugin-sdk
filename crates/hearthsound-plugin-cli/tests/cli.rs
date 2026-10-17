@@ -382,3 +382,99 @@ fn build_refuses_a_project_without_a_marker() {
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("no Cargo.toml"));
 }
+
+/// Writes `text` to a scratch file whose name is derived from `label` and the
+/// text, so parallel tests never share a file, and returns its path.
+fn scratch_json(label: &str, text: &str) -> PathBuf {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    text.hash(&mut hasher);
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("run");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join(format!("{label}-{:x}.json", hasher.finish()));
+    std::fs::write(&path, text).unwrap();
+    path
+}
+
+/// Runs `hsplugin run <target>` against the example plugin, with optional
+/// config and input JSON, and returns the parsed JSON printed on stdout.
+fn run_example(target: &str, config: Option<&str>, input: Option<&str>) -> serde_json::Value {
+    let manifest = repo_root().join("examples/hello-catalog/manifest.json");
+    let mut args: Vec<String> = vec![
+        "run".into(),
+        target.into(),
+        "--manifest".into(),
+        arg(&manifest).into(),
+        "--wasm".into(),
+        arg(example_wasm()).into(),
+    ];
+    if let Some(text) = config {
+        args.push("--config".into());
+        args.push(arg(&scratch_json("config", text)).into());
+    }
+    if let Some(text) = input {
+        args.push("--input".into());
+        args.push(arg(&scratch_json("input", text)).into());
+    }
+    let output = Command::new(HSPLUGIN)
+        .args(&args)
+        .output()
+        .expect("hsplugin runs");
+    assert!(
+        output.status.success(),
+        "hsplugin run failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    serde_json::from_slice(&output.stdout).expect("stdout is JSON")
+}
+
+#[test]
+fn run_health_reports_a_string() {
+    let value = run_example("lifecycle.health", None, None);
+    assert!(value["ok"].is_string(), "unexpected output: {value}");
+}
+
+#[test]
+fn run_validate_config_accepts_a_valid_document() {
+    let value = run_example(
+        "lifecycle.validate-config",
+        None,
+        Some(r#""{\"greeting\":\"Hi\"}""#),
+    );
+    assert!(value.get("ok").is_some(), "unexpected output: {value}");
+    assert!(value.get("error").is_none(), "unexpected output: {value}");
+}
+
+#[test]
+fn run_validate_config_rejects_invalid_json() {
+    let value = run_example("lifecycle.validate-config", None, Some(r#""not json""#));
+    let errors = value["error"].as_array().expect("error list");
+    assert!(!errors.is_empty(), "unexpected output: {value}");
+}
+
+#[test]
+fn run_search_round_trips_the_configured_greeting() {
+    let value = run_example(
+        "catalog.search",
+        Some(r#"{"greeting":"Hi"}"#),
+        Some(r#"{"text":"world","kinds":["track"],"limit":5,"offset":0}"#),
+    );
+    let track = &value["ok"]["tracks"][0];
+    assert_eq!(track["id"], "hello-track-1", "unexpected output: {value}");
+    assert_eq!(track["title"], "Hi, world", "unexpected output: {value}");
+}
+
+#[test]
+fn run_get_track_returns_the_requested_id() {
+    let value = run_example("catalog.get-track", None, Some(r#""hello-track-1""#));
+    assert_eq!(
+        value["ok"]["id"], "hello-track-1",
+        "unexpected output: {value}"
+    );
+}
+
+#[test]
+fn run_unknown_track_yields_a_not_found_error() {
+    let value = run_example("catalog.get-track", None, Some(r#""missing""#));
+    assert_eq!(value, serde_json::json!({"error": "not_found"}));
+}

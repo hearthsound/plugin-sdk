@@ -11,7 +11,7 @@ use wasmtime::component::Component;
 use wasmtime::component::types::ComponentItem;
 
 /// Version of the `hearthsound:plugin` package every plugin targets.
-const API_VERSION: &str = "0.2.0";
+pub(crate) const API_VERSION: &str = "0.2.0";
 
 /// Host interfaces every plugin may import.
 const COMMON_HOST_INTERFACES: [&str; 5] = [

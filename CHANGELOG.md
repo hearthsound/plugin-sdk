@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   TinyGo, npm, componentize-py or `dotnet publish`); non-Rust components are
   written to `build/plugin.wasm`, which `check` and `pack` find without
   `--wasm`.
+- `hsplugin run <capability>.<function>` calls one function of a built plugin
+  against a mock host that enforces the manifest's HTTP allowlist, the KV quota,
+  the `host-files` staging root and the 30 second call deadline, printing the
+  result as `{"ok": ...}` or `{"error": ...}`.
 
 ## [0.2.0] - 2026-10-16
 

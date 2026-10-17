@@ -17,10 +17,13 @@
 mod build;
 mod check;
 mod component;
+mod host;
 mod manifest;
 mod pack;
+mod run;
 mod scaffold;
 mod temp;
+mod values;
 
 use std::path::PathBuf;
 
@@ -50,6 +53,8 @@ enum Command {
     Check(CheckArgs),
     /// Validate a plugin, then write it to a `.hsplugin` archive.
     Pack(PackArgs),
+    /// Call one plugin function against the mock host.
+    Run(RunArgs),
 }
 
 /// Arguments of `hsplugin new`.
@@ -95,6 +100,30 @@ struct CheckArgs {
     /// Path to the compiled component; defaults to the release build output.
     #[arg(long)]
     wasm: Option<PathBuf>,
+}
+
+/// Arguments of `hsplugin run`.
+#[derive(Debug, Args)]
+struct RunArgs {
+    /// The function to run, as `<capability>.<function>`, for example
+    /// `catalog.search`.
+    target: String,
+
+    /// Path to the plugin's `manifest.json`.
+    #[arg(long, default_value = "manifest.json")]
+    manifest: PathBuf,
+
+    /// Path to the compiled component; defaults to the release build output.
+    #[arg(long)]
+    wasm: Option<PathBuf>,
+
+    /// JSON file with the server-scoped configuration.
+    #[arg(long)]
+    config: Option<PathBuf>,
+
+    /// JSON file with the function arguments.
+    #[arg(long)]
+    input: Option<PathBuf>,
 }
 
 /// Arguments of `hsplugin pack`.
@@ -145,6 +174,16 @@ fn main() {
                 Err(error) => fail(&[error]),
             },
             Err(errors) => fail(&errors),
+        },
+        Command::Run(args) => match run::run(
+            &args.manifest,
+            args.wasm.as_deref(),
+            args.config.as_deref(),
+            &args.target,
+            args.input.as_deref(),
+        ) {
+            Ok(value) => println!("{value}"),
+            Err(error) => fail(&[error]),
         },
     }
 }
