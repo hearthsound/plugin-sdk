@@ -478,3 +478,57 @@ fn run_unknown_track_yields_a_not_found_error() {
     let value = run_example("catalog.get-track", None, Some(r#""missing""#));
     assert_eq!(value, serde_json::json!({"error": "not_found"}));
 }
+
+#[test]
+fn test_catalog_suite_passes_on_the_example() {
+    let manifest = repo_root().join("examples/hello-catalog/manifest.json");
+    let wasm = example_wasm();
+    let output = hsplugin(&[
+        "test",
+        "catalog",
+        "--manifest",
+        arg(&manifest),
+        "--wasm",
+        arg(wasm),
+    ]);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "unexpected failure: {stdout}");
+    assert!(stdout.contains("ok 1: validate-config accepts the configuration"));
+    assert!(stdout.contains("ok 12: an empty search returns empty lists"));
+    assert!(
+        !stdout.contains("error "),
+        "unexpected error line: {stdout}"
+    );
+}
+
+#[test]
+fn test_suite_reports_numbered_failures_and_exits_one() {
+    let manifest = repo_root().join("examples/hello-catalog/manifest.json");
+    let wasm = example_wasm();
+    let output = hsplugin(&[
+        "test",
+        "metadata",
+        "--manifest",
+        arg(&manifest),
+        "--wasm",
+        arg(wasm),
+    ]);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        stdout.contains("error 1: resolve-recording"),
+        "missing numbered failure: {stdout}"
+    );
+}
+
+#[test]
+fn test_unknown_layer_is_rejected() {
+    let manifest = repo_root().join("examples/hello-catalog/manifest.json");
+    let output = hsplugin(&["test", "bogus", "--manifest", arg(&manifest)]);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        stderr.contains("no conformance suite for `bogus`"),
+        "unexpected stderr: {stderr}"
+    );
+}

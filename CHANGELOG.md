@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against a mock host that enforces the manifest's HTTP allowlist, the KV quota,
   the `host-files` staging root and the 30 second call deadline, printing the
   result as `{"ok": ...}` or `{"error": ...}`.
+- `hsplugin test <catalog|metadata|artwork|acquisition>` runs a layer's
+  conformance suite against a built plugin through the mock host, printing
+  `ok <n>: <check>` or `error <n>: <check>: <detail>` per check and exiting 1
+  when any check fails.
 
 ## [0.2.0] - 2026-10-16
 

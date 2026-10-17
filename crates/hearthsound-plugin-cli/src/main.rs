@@ -22,6 +22,7 @@ mod manifest;
 mod pack;
 mod run;
 mod scaffold;
+mod suites;
 mod temp;
 mod values;
 
@@ -55,6 +56,8 @@ enum Command {
     Pack(PackArgs),
     /// Call one plugin function against the mock host.
     Run(RunArgs),
+    /// Check a plugin against a layer's conformance suite.
+    Test(TestArgs),
 }
 
 /// Arguments of `hsplugin new`.
@@ -126,6 +129,25 @@ struct RunArgs {
     input: Option<PathBuf>,
 }
 
+/// Arguments of `hsplugin test`.
+#[derive(Debug, Args)]
+struct TestArgs {
+    /// Layer whose conformance suite runs: catalog, metadata, artwork or acquisition.
+    layer: String,
+
+    /// Path to the plugin's `manifest.json`.
+    #[arg(long, default_value = "manifest.json")]
+    manifest: PathBuf,
+
+    /// Path to the compiled component; defaults to the release build output.
+    #[arg(long)]
+    wasm: Option<PathBuf>,
+
+    /// JSON file with the server-scoped configuration.
+    #[arg(long)]
+    config: Option<PathBuf>,
+}
+
 /// Arguments of `hsplugin pack`.
 #[derive(Debug, Args)]
 struct PackArgs {
@@ -183,6 +205,22 @@ fn main() {
             args.input.as_deref(),
         ) {
             Ok(value) => println!("{value}"),
+            Err(error) => fail(&[error]),
+        },
+        Command::Test(args) => match suites::test(
+            &args.manifest,
+            args.wasm.as_deref(),
+            args.config.as_deref(),
+            &args.layer,
+        ) {
+            Ok(report) => {
+                for line in report.lines() {
+                    println!("{line}");
+                }
+                if !report.passed() {
+                    std::process::exit(1);
+                }
+            }
             Err(error) => fail(&[error]),
         },
     }

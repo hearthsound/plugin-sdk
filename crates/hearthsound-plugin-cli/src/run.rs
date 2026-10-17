@@ -190,7 +190,7 @@ impl Session {
 /// Only top-level properties that the document leaves out are filled, and only
 /// when the schema gives them a `default`. A `Null` document becomes an empty
 /// object; a non-object document is returned unchanged.
-fn with_defaults(config: Value, manifest: &Value) -> Value {
+pub(crate) fn with_defaults(config: Value, manifest: &Value) -> Value {
     let mut config = if config.is_null() { json!({}) } else { config };
     let Some(properties) = manifest
         .pointer("/config/server/schema/properties")
@@ -259,7 +259,7 @@ pub fn run(
 /// # Errors
 ///
 /// Returns a message naming the file when it cannot be read or parsed.
-fn read_json(path: Option<&Path>, what: &str) -> Result<Option<Value>, String> {
+pub(crate) fn read_json(path: Option<&Path>, what: &str) -> Result<Option<Value>, String> {
     let Some(path) = path else {
         return Ok(None);
     };
