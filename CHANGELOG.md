@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Updated wasmtime and wasmtime-wasi to 49.0.4, rustls-webpki to 0.103.16 and
+  webpki-root-certs to 1.0.10, fixing RUSTSEC-2026-0378, RUSTSEC-2026-0379,
+  RUSTSEC-2026-0382 and RUSTSEC-2026-0383.
+
 ## [0.2.1] - 2026-10-17
 
 ### Added
