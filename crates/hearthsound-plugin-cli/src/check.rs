@@ -101,7 +101,7 @@ pub fn run(manifest_path: &Path, wasm: Option<&Path>) -> Result<Checked, Vec<Str
     let engine = wasmtime::Engine::default();
     match wasmtime::component::Component::from_file(&engine, &wasm_path) {
         Ok(compiled) => {
-            component::check(&engine, &compiled, &manifest.provides(), &mut errors);
+            component::check(&engine, &compiled, manifest.value(), &mut errors);
         }
         Err(error) => errors.push(format!("{}: {error:#}", wasm_path.display())),
     }

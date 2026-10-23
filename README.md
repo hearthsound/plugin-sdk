@@ -3,9 +3,10 @@
 Interface definitions, a Rust SDK, and a packaging CLI for Hearthsound plugins.
 
 A Hearthsound plugin is a WebAssembly component that implements one or more of
-the server's provider layers (catalog, metadata, artwork, acquisition, and later
-verification, scrobble, discovery, lyrics and playlist import). This repository
-is the single source of truth for the interface those components speak.
+the server's provider layers (catalog, metadata, artwork, acquisition,
+verification, scrobble and discovery; lyrics and playlist import follow later).
+This repository is the single source of truth for the interface those components
+speak.
 
 ## Layout
 
@@ -43,26 +44,37 @@ hearthsound_plugin::export_catalog_provider!(MyCatalog);
 hearthsound_plugin::export_metadata_provider!(MyMetadata);
 hearthsound_plugin::export_artwork_provider!(MyArtwork);
 hearthsound_plugin::export_acquisition_provider!(MyAcquisition);
+hearthsound_plugin::export_process_acquisition_provider!(MyToolAcquisition);
+hearthsound_plugin::export_verification_provider!(MyVerification);
+hearthsound_plugin::export_scrobble_discovery_link_provider!(MyScrobbler);
 ```
 
 A plugin that serves a layer alongside `artwork` uses the combined macro
 `export_metadata_artwork_provider!` or `export_catalog_artwork_provider!`
-instead, so one component serves both layers.
+instead, so one component serves both layers. `export_scrobble_discovery_link_provider!`
+exports `scrobble`, `discovery` and `account-link` from one component;
+`account-link` is a capability rather than a layer, so the manifest declares
+only the layers it provides.
 
 A plugin implements the guest traits of the world it exports, which it finds
 under `hearthsound_plugin::catalog_provider`,
 `hearthsound_plugin::metadata_provider`,
 `hearthsound_plugin::artwork_provider`,
 `hearthsound_plugin::metadata_artwork_provider`,
-`hearthsound_plugin::catalog_artwork_provider` and
-`hearthsound_plugin::acquisition_provider`; the shared `types`, host imports and
-helpers are the same for every world. Every world except the catalog one lives in
-its own crate because wit-bindgen allows one export macro per crate for worlds
-that share an exported interface, and this crate re-exports them, so a plugin
-still depends only on `hearthsound-plugin`.
+`hearthsound_plugin::catalog_artwork_provider`,
+`hearthsound_plugin::acquisition_provider`,
+`hearthsound_plugin::process_acquisition_provider`,
+`hearthsound_plugin::verification_provider` and
+`hearthsound_plugin::scrobble_discovery_link_provider`; the shared `types`, host
+imports and helpers are the same for every world. Every world except the catalog
+one lives in its own crate because wit-bindgen allows one export macro per crate
+for worlds that share an exported interface, and this crate re-exports them, so
+a plugin still depends only on `hearthsound-plugin`.
 
 `hearthsound_plugin::host::files` is available to acquisition plugins, which use
-it to report the files they produced.
+it to report the files they produced, and
+`hearthsound_plugin::host::process` to an acquisition plugin that runs a tool
+from its manifest's `permissions.process.tools`.
 
 Build the component and package it:
 
@@ -137,7 +149,8 @@ hsplugin run catalog.search --input search.json --config config.json
 
 Calls one function, named `<capability>.<function>` with the WIT names, through
 the mock host. The capabilities are `catalog`, `metadata`, `artwork`,
-`acquisition` and `lifecycle`.
+`acquisition`, `verification`, `scrobble`, `discovery`, `account-link` and
+`lifecycle`.
 
 Input (`--input`, a JSON file): zero-argument functions need no file. A
 single-argument function takes the argument's JSON value directly, a string
@@ -148,6 +161,21 @@ parameter name, in snake_case or WIT kebab-case, for example
 `catalog.search` takes `{"text": "hello", "kinds": ["track"], "limit": 5, "offset": 0}`;
 an empty `kinds` list means every kind.
 
+A `user-context` argument may be left out of `--input`: its `user-id` becomes
+the nil UUID and its `config` becomes the `--user-config` JSON document, or
+`none` when the flag is absent.
+
+```console
+hsplugin run scrobble.get-limits
+hsplugin run discovery.similar-artists --input seed.json
+hsplugin run account-link.verify-account --user-config '{"token":"good"}'
+```
+
+`--tool <name>=<path>` (repeatable) maps a tool name to the executable the
+`host-process` import starts, for example
+`--tool yt-dlp=/usr/local/bin/yt-dlp`. A tool the manifest declares under
+`permissions.process.tools` without a mapping is `not-configured`.
+
 Output: one JSON value on stdout. A call that returns a value prints
 `{"ok": <result>}`, and a provider error prints `{"error": <variant>}`.
 Unit variants are snake_case strings (`"not_found"`); variants with a payload
@@ -156,7 +184,10 @@ are one-key objects (`{"rate_limited": 30}`, `{"invalid_config": "..."}`);
 
 The mock host applies the same limits a server would: a 30 second call
 deadline; no sockets and no preopened directories; `host-files` rooted at a
-temporary staging directory; a key-value store of 256 KiB per value with a
+temporary staging directory; a process table that runs at most four tools at
+once, clears the environment except `PATH`, `HOME` and the entries the plugin
+supplies, keeps at most 1 MiB unread per stream and kills a tool once its
+timeout passes; a key-value store of 256 KiB per value with a
 1 MiB default quota; and HTTP only to hosts in the manifest allowlist (an exact
 host, `*.domain`, or a host named by `$config:<field>`), with a 10 second
 default timeout capped at 60 seconds, at most 5 redirects and a 10 MiB body cap.
@@ -171,11 +202,11 @@ hsplugin test catalog --manifest manifest.json --config config.json
 ```
 
 Runs a layer's conformance suite against the built component through the mock
-host. The layer is `catalog`, `metadata`, `artwork` or `acquisition`. Each check
-prints one line, `ok <n>: <check>` or `error <n>: <check>: <detail>`, in order.
-The command exits 0 when every check passes and 1 otherwise. A layer the
-component does not export fails each of its checks with
-`component does not export ...`.
+host. The layer is `catalog`, `metadata`, `artwork`, `acquisition`, `scrobble`,
+`discovery` or `verification`. Each check prints one line, `ok <n>: <check>` or
+`error <n>: <check>: <detail>`, in order. The command exits 0 when every check
+passes and 1 otherwise. A layer the component does not export fails each of its
+checks with `component does not export ...`.
 
 Checks, by suite:
 
@@ -196,11 +227,18 @@ Checks, by suite:
  `complete` or a provider error within 30 seconds, where a provider error is the
  failed state because the `search-state` variant has no failed case; an unknown
  token is answered with a provider error.
+- `scrobble` (2 checks): `get-limits` reports a `max-batch` of at least 1 and a
+ `min-interval-ms` of at most 60000, so a host can batch listens without
+ flooding the service.
+- `discovery` (1 check): `similar-artists` for a seed with a MusicBrainz id
+ returns at most `limit` artists, each with a non-empty name.
+- `verification` (1 check): `verify` of a fixed fingerprint answers a known
+ verdict with a score from 0 to 1.
 
-The acquisition suite is compiled and clippy-checked but not verified against a
-plugin: no fixture in this repository exports the acquisition layer, and none
-was added for it. Its results are unverified until a real acquisition plugin
-runs it.
+The acquisition, scrobble, discovery and verification suites are compiled and
+clippy-checked but not verified against a plugin: no fixture in this repository
+exports those layers, and none was added for them. Their results are unverified
+until a real provider plugin runs them.
 
 ## License
 

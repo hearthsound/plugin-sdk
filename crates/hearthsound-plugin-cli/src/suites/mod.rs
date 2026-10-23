@@ -10,8 +10,11 @@
 mod acquisition;
 mod artwork;
 mod catalog;
+mod discovery;
 mod helpers;
 mod metadata;
+mod scrobble;
+mod verification;
 
 use std::path::Path;
 
@@ -21,7 +24,15 @@ use crate::check;
 use crate::run::{Session, read_json, with_defaults};
 
 /// The layers that have a conformance suite.
-const LAYERS: [&str; 4] = ["catalog", "metadata", "artwork", "acquisition"];
+const LAYERS: [&str; 7] = [
+    "catalog",
+    "metadata",
+    "artwork",
+    "acquisition",
+    "scrobble",
+    "discovery",
+    "verification",
+];
 
 /// The outcome of every check in one suite run, in the order they ran.
 #[derive(Debug, Default)]
@@ -108,7 +119,8 @@ impl Report {
 /// - `manifest_path`: path to the plugin's `manifest.json`.
 /// - `wasm`: explicit component path, or `None` to find the build output.
 /// - `config_path`: optional JSON file with the server-scoped configuration.
-/// - `layer`: one of `catalog`, `metadata`, `artwork` or `acquisition`.
+/// - `layer`: one of `catalog`, `metadata`, `artwork`, `acquisition`,
+///   `scrobble`, `discovery` or `verification`.
 ///
 /// # Errors
 ///
@@ -138,7 +150,10 @@ pub fn test(
         "catalog" => catalog::run(&mut session, &config, &mut report),
         "metadata" => metadata::run(&mut session, &mut report),
         "artwork" => artwork::run(&mut session, &mut report),
-        _ => acquisition::run(&mut session, &mut report),
+        "acquisition" => acquisition::run(&mut session, &mut report),
+        "scrobble" => scrobble::run(&mut session, &mut report),
+        "discovery" => discovery::run(&mut session, &mut report),
+        _ => verification::run(&mut session, &mut report),
     }
     Ok(report)
 }

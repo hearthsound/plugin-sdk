@@ -6,8 +6,9 @@
 //! output is reported as `info:` lines and standard error as `warn:` lines on
 //! stderr; the function result is returned as JSON.
 
+use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 use wasmtime::Store;
@@ -21,7 +22,17 @@ use crate::values::{arguments, val_to_json};
 
 /// Capability names accepted as the first half of a `run` target. `lifecycle`
 /// is the base interface every provider world exports.
-const CAPABILITIES: [&str; 5] = ["catalog", "metadata", "artwork", "acquisition", "lifecycle"];
+const CAPABILITIES: [&str; 9] = [
+    "catalog",
+    "metadata",
+    "artwork",
+    "acquisition",
+    "verification",
+    "scrobble",
+    "discovery",
+    "account-link",
+    "lifecycle",
+];
 
 /// A loaded component ready for repeated calls.
 ///
@@ -36,6 +47,7 @@ pub struct Session {
     stderr: MemoryOutputPipe,
     stdout_seen: usize,
     stderr_seen: usize,
+    user_config: Option<Value>,
 }
 
 impl Session {
@@ -55,6 +67,28 @@ impl Session {
     /// Returns a message when the engine, the staging directory, the linker or
     /// the instantiation fails.
     pub fn open(checked: &Checked, config: Value) -> Result<Self, String> {
+        Self::open_with(checked, config, HashMap::new(), None)
+    }
+
+    /// Opens a session with tool mappings for `host-process` and a user config.
+    ///
+    /// # Parameters
+    ///
+    /// - `checked`: a component that passed `hsplugin check`.
+    /// - `config`: the server-scoped configuration document.
+    /// - `tools`: executable paths keyed by the tool name a plugin spawns.
+    /// - `user_config`: the document handed to `user-context` arguments as
+    ///   their `config` JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Session::open`].
+    pub fn open_with(
+        checked: &Checked,
+        config: Value,
+        tools: HashMap<String, PathBuf>,
+        user_config: Option<Value>,
+    ) -> Result<Self, String> {
         let config = with_defaults(config, checked.manifest().value());
         let engine = host::engine().map_err(|error| format!("{error:#}"))?;
         let component = Component::from_file(&engine, checked.wasm())
@@ -68,6 +102,7 @@ impl Session {
             staging.path().to_path_buf(),
             stdout.clone(),
             stderr.clone(),
+            tools,
         )?;
         let mut store = Store::new(&engine, state);
         let linker = host::linker(&engine).map_err(|error| format!("{error:#}"))?;
@@ -86,6 +121,7 @@ impl Session {
             stderr,
             stdout_seen: 0,
             stderr_seen: 0,
+            user_config,
         })
     }
 
@@ -97,7 +133,9 @@ impl Session {
     ///
     /// # Parameters
     ///
-    /// - `capability`: one of `catalog`, `metadata`, `artwork`, `acquisition`.
+    /// - `capability`: one of `catalog`, `metadata`, `artwork`, `acquisition`,
+    ///   `verification`, `scrobble`, `discovery`, `account-link` or
+    ///   `lifecycle`.
     /// - `function`: the WIT function name, in kebab-case or snake_case.
     /// - `input`: the JSON arguments. A single-parameter function takes its
     ///   argument directly; a function with several parameters takes an object
@@ -150,7 +188,7 @@ impl Session {
             .map(|(param, ty)| (param.to_owned(), ty))
             .collect();
         let returns_result = matches!(ty.results().next(), Some(Type::Result(_)));
-        let args = arguments(&params, input)?;
+        let args = arguments(&params, input, self.user_config.as_ref())?;
         let mut results = vec![Val::Bool(false); ty.results().len()];
 
         self.store.set_epoch_deadline(CALL_DEADLINE_TICKS);
@@ -224,6 +262,9 @@ pub(crate) fn with_defaults(config: Value, manifest: &Value) -> Value {
 /// - `target`: `<capability>.<function>`, for example `catalog.search`.
 /// - `input_path`: a JSON file with the function arguments; `None` for
 ///   functions without arguments.
+/// - `user_config`: the document a `user-context` argument receives as its
+///   `config`; `None` leaves that member empty.
+/// - `tools`: executable paths keyed by tool name for `host-process`.
 ///
 /// # Errors
 ///
@@ -234,7 +275,15 @@ pub(crate) fn with_defaults(config: Value, manifest: &Value) -> Value {
 /// # Examples
 ///
 /// ```text
-/// let value = run::run(Path::new("manifest.json"), None, None, "catalog.health", None)?;
+/// let value = run::run(
+///     Path::new("manifest.json"),
+///     None,
+///     None,
+///     "catalog.health",
+///     None,
+///     None,
+///     HashMap::new(),
+/// )?;
 /// assert_eq!(value, serde_json::json!({"ok": "ok"}));
 /// ```
 pub fn run(
@@ -243,6 +292,8 @@ pub fn run(
     config_path: Option<&Path>,
     target: &str,
     input_path: Option<&Path>,
+    user_config: Option<Value>,
+    tools: HashMap<String, PathBuf>,
 ) -> Result<Value, String> {
     let (capability, function) = target
         .split_once('.')
@@ -250,7 +301,7 @@ pub fn run(
     let checked = check::run(manifest_path, wasm).map_err(|errors| errors.join("\n"))?;
     let config = read_json(config_path, "config")?.unwrap_or(Value::Null);
     let input = read_json(input_path, "input")?;
-    let mut session = Session::open(&checked, config)?;
+    let mut session = Session::open_with(&checked, config, tools, user_config)?;
     session.call(capability, function, input)
 }
 

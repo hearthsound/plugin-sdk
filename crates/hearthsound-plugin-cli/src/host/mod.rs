@@ -10,7 +10,9 @@
 pub mod files;
 pub mod http;
 pub mod kv;
+pub mod process;
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -23,18 +25,20 @@ use wasmtime::{Config, Engine};
 use wasmtime_wasi::p2::pipe::MemoryOutputPipe;
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
 
-use self::bindings::hearthsound::plugin::{host_config, host_files, host_http, host_kv, host_log};
+use self::bindings::hearthsound::plugin::{
+    host_config, host_files, host_http, host_kv, host_log, host_process,
+};
 
 /// Host-side bindings generated from the SDK's WIT package.
 ///
-/// The acquisition world is used because it imports every host interface.
-/// Components of the other worlds import a subset of those interfaces, which
-/// the linker accepts.
+/// The process-acquisition world is used because it imports every host
+/// interface a plugin may reach. Components of the other worlds import a
+/// subset of those interfaces, which the linker accepts.
 #[allow(missing_docs, unused, clippy::all)]
 mod bindings {
     wasmtime::component::bindgen!({
         path: "../../wit",
-        world: "hearthsound:plugin/acquisition-provider",
+        world: "hearthsound:plugin/process-acquisition-provider",
     });
 }
 
@@ -76,7 +80,7 @@ pub fn engine() -> wasmtime::Result<Engine> {
 pub fn linker(engine: &Engine) -> wasmtime::Result<Linker<HostState>> {
     let mut linker = Linker::new(engine);
     wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
-    bindings::AcquisitionProvider::add_to_linker::<HostState, HasSelf<HostState>>(
+    bindings::ProcessAcquisitionProvider::add_to_linker::<HostState, HasSelf<HostState>>(
         &mut linker,
         |state| state,
     )?;
@@ -125,6 +129,7 @@ pub struct HostState {
     policy: http::Policy,
     kv: kv::Kv,
     files: files::Files,
+    process: process::Processes,
     config: Value,
 }
 
@@ -134,10 +139,13 @@ impl HostState {
     /// # Parameters
     ///
     /// - `manifest`: the parsed plugin manifest; supplies the HTTP allowlist,
-    ///   the KV quota and the plugin id used in the user agent.
+    ///   the KV quota, the plugin id used in the user agent and the process
+    ///   tools the plugin may spawn.
     /// - `config`: the server-scoped configuration handed to the guest.
-    /// - `staging`: the directory exposed as the `staging` file root.
+    /// - `staging`: the directory exposed as the `staging` file root, and the
+    ///   base of every relative path a spawned tool receives.
     /// - `stdout`, `stderr`: pipes that capture the guest's standard streams.
+    /// - `tools`: executable paths keyed by tool name for `host-process`.
     ///
     /// # Errors
     ///
@@ -149,6 +157,7 @@ impl HostState {
         staging: PathBuf,
         stdout: MemoryOutputPipe,
         stderr: MemoryOutputPipe,
+        tools: HashMap<String, PathBuf>,
     ) -> Result<Self, String> {
         let id = manifest
             .get("id")
@@ -157,12 +166,25 @@ impl HostState {
         let policy = http::Policy::from_manifest(manifest, format!("hsplugin-run/{id}"))
             .map_err(|error| format!("{error:#}"))?;
         let wasi = WasiCtxBuilder::new().stdout(stdout).stderr(stderr).build();
+        let declared = manifest
+            .pointer("/permissions/process/tools")
+            .and_then(Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .unwrap_or_default();
+        let process = process::Processes::new(staging.clone(), declared, tools);
         Ok(Self {
             wasi,
             table: ResourceTable::new(),
             policy,
             kv: kv::Kv::new(kv::quota_from_manifest(manifest)),
             files: files::Files::new(staging),
+            process,
             config,
         })
     }
@@ -251,6 +273,42 @@ impl host_files::Host for HostState {
 
     fn list_dir(&mut self, root: String, path: String) -> Result<Vec<String>, String> {
         self.files.list_dir(&root, &path)
+    }
+}
+
+impl host_process::Host for HostState {
+    fn spawn(
+        &mut self,
+        tool: String,
+        args: Vec<String>,
+        options: host_process::SpawnOptions,
+    ) -> Result<host_process::ProcessHandle, host_process::ProcessError> {
+        self.process.spawn(&tool, &args, options)
+    }
+
+    fn poll(
+        &mut self,
+        handle: host_process::ProcessHandle,
+    ) -> Result<host_process::ProcessState, host_process::ProcessError> {
+        self.process.poll(handle)
+    }
+
+    fn read_stdout(
+        &mut self,
+        handle: host_process::ProcessHandle,
+    ) -> Result<Vec<u8>, host_process::ProcessError> {
+        self.process.read_stdout(handle)
+    }
+
+    fn read_stderr(
+        &mut self,
+        handle: host_process::ProcessHandle,
+    ) -> Result<Vec<u8>, host_process::ProcessError> {
+        self.process.read_stderr(handle)
+    }
+
+    fn kill(&mut self, handle: host_process::ProcessHandle) {
+        self.process.kill(handle);
     }
 }
 

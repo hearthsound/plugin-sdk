@@ -6,6 +6,7 @@
 //! `hsplugin check`, so a plugin that passes packaging is a plugin the server
 //! can load.
 
+use serde_json::Value;
 use wasmtime::Engine;
 use wasmtime::component::Component;
 use wasmtime::component::types::ComponentItem;
@@ -25,6 +26,9 @@ const COMMON_HOST_INTERFACES: [&str; 5] = [
 /// Host interface reserved for acquisition plugins.
 const HOST_FILES: &str = "hearthsound:plugin/host-files";
 
+/// Host interface reserved for acquisition plugins that run configured tools.
+const HOST_PROCESS: &str = "hearthsound:plugin/host-process";
+
 /// The supported plugin API version, as it appears in a manifest.
 const SUPPORTED_API: &str = "hearthsound:plugin@0.3.0";
 
@@ -39,7 +43,19 @@ const WASI_PACKAGES: [&str; 6] = [
 ];
 
 /// Provider interfaces a component may export, mapped to manifest layers.
-const CAPABILITY_INTERFACES: [&str; 4] = ["catalog", "metadata", "artwork", "acquisition"];
+const CAPABILITY_INTERFACES: [&str; 7] = [
+    "catalog",
+    "metadata",
+    "artwork",
+    "acquisition",
+    "verification",
+    "scrobble",
+    "discovery",
+];
+
+/// The capability a plugin exports alongside `scrobble` or `discovery`; it is
+/// not a layer of its own.
+const ACCOUNT_LINK_INTERFACE: &str = "account-link";
 
 /// The interface every plugin must export.
 const LIFECYCLE_INTERFACE: &str = "lifecycle";
@@ -50,16 +66,14 @@ const LIFECYCLE_INTERFACE: &str = "lifecycle";
 ///
 /// - `engine`: engine the component was compiled with.
 /// - `component`: the compiled component.
-/// - `provides`: the layers the manifest declares.
+/// - `manifest`: the parsed manifest; its `provides` list and its process tool
+///   declarations decide which imports and exports are allowed.
 /// - `errors`: collects one message per violation; left untouched when the
 ///   component is valid.
-pub fn check(
-    engine: &Engine,
-    component: &Component,
-    provides: &[String],
-    errors: &mut Vec<String>,
-) {
+pub fn check(engine: &Engine, component: &Component, manifest: &Value, errors: &mut Vec<String>) {
     let ty = component.component_type();
+    let provides = provides(manifest);
+    let tools = process_tools(manifest);
 
     for (name, ext) in ty.imports(engine) {
         if !matches!(ext.ty, ComponentItem::ComponentInstance(_)) {
@@ -67,7 +81,16 @@ pub fn check(
             continue;
         }
         let (interface, version) = split_version(name);
-        if !import_allowed(interface, version, provides) {
+        if version == API_VERSION
+            && interface == HOST_PROCESS
+            && !process_allowed(&provides, &tools)
+        {
+            errors.push(format!(
+                "component imports `{name}` without listing a tool under permissions.process.tools"
+            ));
+            continue;
+        }
+        if !import_allowed(interface, version, &provides, &tools) {
             errors.push(format!("component imports unsupported interface `{name}`"));
         }
     }
@@ -80,17 +103,17 @@ pub fn check(
             continue;
         }
         let (interface, version) = split_version(name);
-        let layer = interface.strip_prefix("hearthsound:plugin/");
-        match layer {
-            Some(lifecycle)
-                if version == API_VERSION
-                    && (lifecycle == LIFECYCLE_INTERFACE
-                        || CAPABILITY_INTERFACES.contains(&lifecycle)) =>
-            {
-                if lifecycle == LIFECYCLE_INTERFACE {
-                    exports_lifecycle = true;
-                } else {
-                    exported_layers.push(lifecycle.to_string());
+        let item = interface.strip_prefix("hearthsound:plugin/");
+        match item {
+            Some(LIFECYCLE_INTERFACE) if version == API_VERSION => exports_lifecycle = true,
+            Some(layer) if version == API_VERSION && CAPABILITY_INTERFACES.contains(&layer) => {
+                exported_layers.push(layer.to_string());
+            }
+            Some(ACCOUNT_LINK_INTERFACE) if version == API_VERSION => {
+                if !account_link_allowed(&provides) {
+                    errors.push(format!(
+                        "component exports `{name}` but the manifest does not declare the `scrobble` or `discovery` layer"
+                    ));
                 }
             }
             _ => errors.push(format!(
@@ -105,7 +128,7 @@ pub fn check(
         ));
     }
 
-    for layer in provides {
+    for layer in &provides {
         if !exported_layers.iter().any(|exported| exported == layer) {
             errors.push(format!(
                 "component does not export `hearthsound:plugin/{layer}@{API_VERSION}` for the `{layer}` layer it provides"
@@ -120,6 +143,48 @@ pub fn check(
             ));
         }
     }
+}
+
+/// Returns the layers a manifest declares, in manifest order.
+fn provides(manifest: &Value) -> Vec<String> {
+    manifest
+        .get("provides")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Returns the tool names a manifest allows under `permissions.process.tools`.
+fn process_tools(manifest: &Value) -> Vec<String> {
+    manifest
+        .pointer("/permissions/process/tools")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Returns whether the manifest may export `account-link`.
+fn account_link_allowed(provides: &[String]) -> bool {
+    provides
+        .iter()
+        .any(|layer| layer == "scrobble" || layer == "discovery")
+}
+
+/// Returns whether the manifest may import `host-process`.
+fn process_allowed(provides: &[String], tools: &[String]) -> bool {
+    provides.iter().any(|layer| layer == "acquisition") && !tools.is_empty()
 }
 
 /// Splits an interface name into its interface id and version.
@@ -140,11 +205,13 @@ fn split_version(name: &str) -> (&str, &str) {
 /// - `interface`: interface id, without its version.
 /// - `version`: interface version.
 /// - `provides`: layers the manifest declares.
-fn import_allowed(interface: &str, version: &str, provides: &[String]) -> bool {
+/// - `tools`: process tool names the manifest declares.
+fn import_allowed(interface: &str, version: &str, provides: &[String], tools: &[String]) -> bool {
     if version == API_VERSION
         && (COMMON_HOST_INTERFACES.contains(&interface)
             || (interface == HOST_FILES
-                && provides.iter().any(|provided| provided == "acquisition")))
+                && provides.iter().any(|provided| provided == "acquisition"))
+            || (interface == HOST_PROCESS && process_allowed(provides, tools)))
     {
         return true;
     }
@@ -165,15 +232,18 @@ pub fn supported_api() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
-    /// Compiles a component exporting `exports` and one empty instance behind
-    /// each of them.
+    /// Compiles a component that imports and exports one empty instance under
+    /// each supplied interface name.
     ///
-    /// The component rules read the export names and versions and never the
-    /// shape of an exported interface, so an empty instance is enough to drive
-    /// them.
-    fn component(engine: &Engine, exports: &[&str]) -> Component {
+    /// The component rules read interface names and versions and never the
+    /// shape of an interface, so an empty instance is enough to drive them.
+    fn component(engine: &Engine, imports: &[&str], exports: &[&str]) -> Component {
         let mut wat = String::from("(component\n  (instance $empty)\n");
+        for name in imports {
+            wat.push_str(&format!("  (import \"{name}\" (instance))\n"));
+        }
         for name in exports {
             wat.push_str(&format!("  (export \"{name}\" (instance $empty))\n"));
         }
@@ -184,12 +254,21 @@ mod tests {
         }
     }
 
-    /// Returns the errors `check` reports for a component and a layer list.
-    fn errors(component: &Component, provides: &[&str]) -> Vec<String> {
+    /// Returns a manifest that declares `provides` and `tools`.
+    fn manifest(provides: &[&str], tools: &[&str]) -> Value {
+        json!({
+            "provides": provides,
+            "permissions": {
+                "process": {"tools": tools},
+            },
+        })
+    }
+
+    /// Returns the errors `check` reports for a component and a manifest.
+    fn errors(component: &Component, manifest: &Value) -> Vec<String> {
         let engine = Engine::default();
-        let provides: Vec<String> = provides.iter().map(|layer| layer.to_string()).collect();
         let mut errors = Vec::new();
-        check(&engine, component, &provides, &mut errors);
+        check(&engine, component, manifest, &mut errors);
         errors
     }
 
@@ -199,12 +278,13 @@ mod tests {
         let engine = Engine::default();
         let component = component(
             &engine,
+            &[],
             &[
                 "hearthsound:plugin/lifecycle@0.3.0",
                 "hearthsound:plugin/artwork@0.3.0",
             ],
         );
-        let errors = errors(&component, &["artwork"]);
+        let errors = errors(&component, &manifest(&["artwork"], &[]));
         assert!(errors.is_empty(), "{errors:?}");
     }
 
@@ -214,12 +294,13 @@ mod tests {
         let engine = Engine::default();
         let component = component(
             &engine,
+            &[],
             &[
                 "hearthsound:plugin/lifecycle@0.3.0",
                 "hearthsound:plugin/artwork@0.3.0",
             ],
         );
-        let errors = errors(&component, &[]);
+        let errors = errors(&component, &manifest(&[], &[]));
         assert!(
             errors
                 .iter()
@@ -235,16 +316,130 @@ mod tests {
         let engine = Engine::default();
         let component = component(
             &engine,
+            &[],
             &[
                 "hearthsound:plugin/lifecycle@0.3.0",
                 "hearthsound:plugin/artwork@0.1.0",
             ],
         );
-        let errors = errors(&component, &["artwork"]);
+        let errors = errors(&component, &manifest(&["artwork"], &[]));
         assert!(
             errors
                 .iter()
                 .any(|error| error.contains("is not a supported hearthsound:plugin interface")),
+            "{errors:?}"
+        );
+    }
+
+    /// `account-link` is allowed next to a `scrobble` layer.
+    #[test]
+    fn an_account_link_export_passes_with_a_scrobble_layer() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &[],
+            &[
+                "hearthsound:plugin/lifecycle@0.3.0",
+                "hearthsound:plugin/scrobble@0.3.0",
+                "hearthsound:plugin/account-link@0.3.0",
+            ],
+        );
+        let errors = errors(&component, &manifest(&["scrobble"], &[]));
+        assert!(errors.is_empty(), "{errors:?}");
+    }
+
+    /// `account-link` is allowed next to a `discovery` layer.
+    #[test]
+    fn an_account_link_export_passes_with_a_discovery_layer() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &[],
+            &[
+                "hearthsound:plugin/lifecycle@0.3.0",
+                "hearthsound:plugin/discovery@0.3.0",
+                "hearthsound:plugin/account-link@0.3.0",
+            ],
+        );
+        let errors = errors(&component, &manifest(&["discovery"], &[]));
+        assert!(errors.is_empty(), "{errors:?}");
+    }
+
+    /// `account-link` without a layer that uses it is rejected.
+    #[test]
+    fn an_account_link_export_needs_scrobbling_or_discovery() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &[],
+            &[
+                "hearthsound:plugin/lifecycle@0.3.0",
+                "hearthsound:plugin/catalog@0.3.0",
+                "hearthsound:plugin/account-link@0.3.0",
+            ],
+        );
+        let errors = errors(&component, &manifest(&["catalog"], &[]));
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.contains("does not declare the `scrobble` or `discovery` layer")),
+            "{errors:?}"
+        );
+    }
+
+    /// A tool-driven acquisition plugin may import `host-process`.
+    #[test]
+    fn a_host_process_import_passes_with_declared_tools() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &["hearthsound:plugin/host-process@0.3.0"],
+            &[
+                "hearthsound:plugin/lifecycle@0.3.0",
+                "hearthsound:plugin/acquisition@0.3.0",
+            ],
+        );
+        let errors = errors(&component, &manifest(&["acquisition"], &["yt-dlp"]));
+        assert!(errors.is_empty(), "{errors:?}");
+    }
+
+    /// A `host-process` import needs a declared process tool.
+    #[test]
+    fn a_host_process_import_needs_declared_tools() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &["hearthsound:plugin/host-process@0.3.0"],
+            &[
+                "hearthsound:plugin/lifecycle@0.3.0",
+                "hearthsound:plugin/acquisition@0.3.0",
+            ],
+        );
+        let errors = errors(&component, &manifest(&["acquisition"], &[]));
+        assert!(
+            errors
+                .iter()
+                .any(|error| error
+                    .contains("without listing a tool under permissions.process.tools")),
+            "{errors:?}"
+        );
+    }
+
+    /// A `host-process` import needs the acquisition layer too.
+    #[test]
+    fn a_host_process_import_needs_the_acquisition_layer() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &["hearthsound:plugin/host-process@0.3.0"],
+            &["hearthsound:plugin/lifecycle@0.3.0"],
+        );
+        let errors = errors(&component, &manifest(&[], &["yt-dlp"]));
+        assert!(
+            errors
+                .iter()
+                .any(|error| error
+                    .contains("without listing a tool under permissions.process.tools")),
             "{errors:?}"
         );
     }

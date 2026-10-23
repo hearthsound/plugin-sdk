@@ -26,6 +26,7 @@ mod suites;
 mod temp;
 mod values;
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
@@ -127,12 +128,23 @@ struct RunArgs {
     /// JSON file with the function arguments.
     #[arg(long)]
     input: Option<PathBuf>,
+
+    /// JSON object of the user's provider configuration, handed to
+    /// `user-context` arguments as their `config`.
+    #[arg(long)]
+    user_config: Option<String>,
+
+    /// Maps a tool name to its executable for `host-process`, as
+    /// `<name>=<path>`; repeat once per tool.
+    #[arg(long = "tool", value_name = "NAME=PATH")]
+    tools: Vec<String>,
 }
 
 /// Arguments of `hsplugin test`.
 #[derive(Debug, Args)]
 struct TestArgs {
-    /// Layer whose conformance suite runs: catalog, metadata, artwork or acquisition.
+    /// Layer whose conformance suite runs: catalog, metadata, artwork,
+    /// acquisition, scrobble, discovery or verification.
     layer: String,
 
     /// Path to the plugin's `manifest.json`.
@@ -197,16 +209,31 @@ fn main() {
             },
             Err(errors) => fail(&errors),
         },
-        Command::Run(args) => match run::run(
-            &args.manifest,
-            args.wasm.as_deref(),
-            args.config.as_deref(),
-            &args.target,
-            args.input.as_deref(),
-        ) {
-            Ok(value) => println!("{value}"),
-            Err(error) => fail(&[error]),
-        },
+        Command::Run(args) => {
+            let tools = match parse_tools(&args.tools) {
+                Ok(tools) => tools,
+                Err(error) => fail(&[error]),
+            };
+            let user_config = match args.user_config {
+                None => None,
+                Some(text) => match serde_json::from_str(&text) {
+                    Ok(value) => Some(value),
+                    Err(error) => fail(&[format!("invalid --user-config JSON: {error}")]),
+                },
+            };
+            match run::run(
+                &args.manifest,
+                args.wasm.as_deref(),
+                args.config.as_deref(),
+                &args.target,
+                args.input.as_deref(),
+                user_config,
+                tools,
+            ) {
+                Ok(value) => println!("{value}"),
+                Err(error) => fail(&[error]),
+            }
+        }
         Command::Test(args) => match suites::test(
             &args.manifest,
             args.wasm.as_deref(),
@@ -224,6 +251,33 @@ fn main() {
             Err(error) => fail(&[error]),
         },
     }
+}
+
+/// Parses repeatable `--tool <name>=<path>` arguments into a tool map.
+///
+/// # Parameters
+///
+/// - `values`: the raw flag values, each of the form `name=path`.
+///
+/// # Returns
+///
+/// Executable paths keyed by tool name. A later mapping for the same name wins.
+///
+/// # Errors
+///
+/// Returns a message for a value without `=`, or with an empty name or path.
+fn parse_tools(values: &[String]) -> Result<HashMap<String, PathBuf>, String> {
+    let mut tools = HashMap::new();
+    for value in values {
+        let (name, path) = value
+            .split_once('=')
+            .ok_or_else(|| format!("--tool `{value}` must be <name>=<path>"))?;
+        if name.is_empty() || path.is_empty() {
+            return Err(format!("--tool `{value}` must name a tool and a path"));
+        }
+        tools.insert(name.to_string(), PathBuf::from(path));
+    }
+    Ok(tools)
 }
 
 /// Prints every error to stderr and exits with status 1.

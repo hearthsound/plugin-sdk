@@ -41,10 +41,16 @@ fn member<'a>(object: &'a Map<String, Value>, wit_name: &str) -> Option<&'a Valu
 /// parameter takes the input as the bare value. A function with several
 /// parameters takes a JSON object with one member per parameter.
 ///
+/// A parameter whose type is the `user-context` record, or an option of it, is
+/// filled in when the input leaves it out: its `user-id` is [`USER_ID`] and its
+/// `config` is `user` rendered as a JSON string, or `none` when no user config
+/// was given.
+///
 /// # Parameters
 ///
 /// - `params`: the parameter names and types, in declaration order.
 /// - `input`: the parsed `--input` document, if one was given.
+/// - `user`: the parsed `--user-config` document, if one was given.
 ///
 /// # Returns
 ///
@@ -54,11 +60,17 @@ fn member<'a>(object: &'a Map<String, Value>, wit_name: &str) -> Option<&'a Valu
 ///
 /// Returns a message when the input is missing, unexpected, or does not match
 /// the parameter types.
-pub fn arguments(params: &[(String, Type)], input: Option<Value>) -> Result<Vec<Val>, String> {
+pub fn arguments(
+    params: &[(String, Type)],
+    input: Option<Value>,
+    user: Option<&Value>,
+) -> Result<Vec<Val>, String> {
     match (params, input) {
         ([], None) => Ok(Vec::new()),
         ([], Some(_)) => Err("this function takes no input; omit --input".into()),
-        (_, None) => Err("this function requires --input with its arguments".into()),
+        ([(_, ty)], None) => user_context(ty, user)
+            .map(|value| vec![value])
+            .ok_or_else(|| "this function requires --input with its arguments".into()),
         ([(_, ty)], Some(value)) => Ok(vec![json_to_val(&value, ty)?]),
         (params, Some(value)) => {
             let object = value
@@ -66,14 +78,64 @@ pub fn arguments(params: &[(String, Type)], input: Option<Value>) -> Result<Vec<
                 .ok_or_else(|| "expected a JSON object with one member per argument".to_string())?;
             params
                 .iter()
-                .map(|(name, ty)| {
-                    let item = member(object, name)
-                        .ok_or_else(|| format!("missing argument `{}`", snake(name)))?;
-                    json_to_val(item, ty)
+                .map(|(name, ty)| match member(object, name) {
+                    Some(item) => json_to_val(item, ty),
+                    None => user_context(ty, user)
+                        .ok_or_else(|| format!("missing argument `{}`", snake(name))),
                 })
                 .collect()
         }
+        (_, None) => Err("this function requires --input with its arguments".into()),
     }
+}
+
+/// The user id reported to a plugin for a `user-context` argument.
+///
+/// The mock host has no user database, so every run attributes the call to the
+/// nil UUID, in the lowercase hyphenated form the server uses.
+pub const USER_ID: &str = "00000000-0000-0000-0000-000000000000";
+
+/// Builds a `user-context` value when `ty` is that record or an option of it.
+///
+/// `config` becomes the JSON text of `user`, or `none` when it is absent. An
+/// optional parameter is `some` of that record when a user config was given
+/// and `none` otherwise. Any other type returns `None`, so callers can fall
+/// back to an input error.
+fn user_context(ty: &Type, user: Option<&Value>) -> Option<Val> {
+    if is_user_context(ty) {
+        return Some(user_context_record(user));
+    }
+    let Type::Option(option) = ty else {
+        return None;
+    };
+    if !is_user_context(&option.ty()) {
+        return None;
+    }
+    Some(match user {
+        Some(_) => Val::Option(Some(Box::new(user_context_record(user)))),
+        None => Val::Option(None),
+    })
+}
+
+/// Returns whether `ty` is the `user-context` record.
+fn is_user_context(ty: &Type) -> bool {
+    let Type::Record(record) = ty else {
+        return false;
+    };
+    let fields: Vec<&str> = record.fields().map(|field| field.name).collect();
+    fields == ["user-id", "config"]
+}
+
+/// Builds the `user-context` record, with `config` set from `user`.
+fn user_context_record(user: Option<&Value>) -> Val {
+    let config = match user {
+        Some(user) => Val::Option(Some(Box::new(Val::String(user.to_string())))),
+        None => Val::Option(None),
+    };
+    Val::Record(vec![
+        ("user-id".to_string(), Val::String(USER_ID.to_string())),
+        ("config".to_string(), config),
+    ])
 }
 
 /// Converts one JSON value into a component value of the given type.

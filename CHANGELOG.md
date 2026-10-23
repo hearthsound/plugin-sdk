@@ -34,9 +34,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `host-process` host interface, through which an acquisition plugin runs an
   external tool the administrator configured, and the
   `process-acquisition-provider` world that imports it.
+- `hsplugin run` accepts `verification`, `scrobble`, `discovery` and
+  `account-link` as capabilities, fills a `user-context` argument from a
+  `--user-config` document, and maps tool names to executables with repeatable
+  `--tool <name>=<path>` flags.
+- The mock host implements `host-process`: at most four live processes per run,
+  an environment cleared except `PATH`, `HOME` and the plugin's allowlisted
+  entries, relative paths confined to the staging directory, 1 MiB of unread
+  output per stream and a wall-clock limit that kills the tool.
+- The `scrobble`, `discovery` and `verification` conformance suites for
+  `hsplugin test`.
 
 ### Changed
 
+- `hsplugin check` accepts the `verification`, `scrobble` and `discovery`
+  layers, allows an `account-link` export only when the manifest provides
+  `scrobble` or `discovery`, and allows a `host-process` import only for an
+  acquisition plugin that lists its tools under `permissions.process.tools`.
 - The WIT package version is now `0.3.0`, so the API string a manifest declares
   and a component is checked against is `hearthsound:plugin@0.3.0`.
 - `permissions.process.tools` lists the tool names a plugin may run rather than
