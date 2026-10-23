@@ -1,8 +1,9 @@
 //! Acquisition suite: capabilities, search start, polling and unknown tokens.
 //!
-//! The 0.2.0 interface reports a search as `running` or `complete` only, so a
-//! provider error from `poll-search` is the terminal failure state. Polling
-//! passes when the search reaches either terminal state within the deadline.
+//! The `search-state` variant reports a search as `running` or `complete` only,
+//! so a provider error from `poll-search` is the terminal failure state.
+//! Polling passes when the search reaches either terminal state within the
+//! deadline.
 
 use std::thread;
 use std::time::{Duration, Instant};

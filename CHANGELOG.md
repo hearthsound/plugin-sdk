@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The `scrobble` interface for now-playing updates, finished listens and
+  love/hate feedback, exported through the `scrobble-provider` world.
+- The `discovery` interface for similar tracks and artists, artist top tracks,
+  recommendations and generated playlists, exported through the
+  `discovery-provider` world.
+- The `verification` interface, which decides whether a downloaded file is the
+  recording the server asked for, exported through the
+  `verification-provider` world.
+- The `account-link` interface for linking a listener's account on a service,
+  exported through the `account-link-provider` world and allowed alongside
+  `scrobble` or `discovery`.
+- The `host-process` host interface, through which an acquisition plugin runs an
+  external tool the administrator configured, and the
+  `process-acquisition-provider` world that imports it.
+
+### Changed
+
+- The WIT package version is now `0.3.0`, so the API string a manifest declares
+  and a component is checked against is `hearthsound:plugin@0.3.0`.
+- `permissions.process.tools` lists the tool names a plugin may run rather than
+  requiring an empty list, up to eight names of lowercase letters, digits,
+  dots and dashes.
+
 ### Security
 
 - Updated wasmtime and wasmtime-wasi to 49.0.4, rustls-webpki to 0.103.16 and

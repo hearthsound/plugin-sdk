@@ -102,7 +102,7 @@ fn mismatched_layer_is_rejected() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(!output.status.success(), "hsplugin unexpectedly succeeded");
     assert!(
-        stderr.contains("hearthsound:plugin/metadata@0.2.0"),
+        stderr.contains("hearthsound:plugin/metadata@0.3.0"),
         "unexpected stderr: {stderr}"
     );
 }

@@ -11,7 +11,7 @@ is the single source of truth for the interface those components speak.
 
 | Path | Contents |
 |---|---|
-| `wit/` | The `hearthsound:plugin@0.2.0` WIT package. |
+| `wit/` | The `hearthsound:plugin@0.3.0` WIT package. |
 | `crates/hearthsound-plugin` | The Rust SDK a plugin depends on: the catalog provider world, host wrappers, the logging, config, HTTP and KV helpers, and the export macros. |
 | `crates/hearthsound-plugin-bindings` | The shared `types` and host-import bindings every provider world remaps to. |
 | `crates/hearthsound-plugin-metadata` | The metadata provider world. |
@@ -191,7 +191,7 @@ Checks, by suite:
 - `acquisition` (4 checks): `get-capabilities` lists granularities;
  `start-search` on a generic track query returns a token; `poll-search` reaches
  `complete` or a provider error within 30 seconds, where a provider error is the
- failed state because the 0.2.0 `search-state` has no failed variant; an unknown
+ failed state because the `search-state` variant has no failed case; an unknown
  token is answered with a provider error.
 
 The acquisition suite is compiled and clippy-checked but not verified against a
