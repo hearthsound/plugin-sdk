@@ -32,7 +32,7 @@ Add the SDK as a dependency and export a provider:
 
 ```toml
 [dependencies]
-hearthsound-plugin = { git = "https://github.com/hearthsound/plugin-sdk", tag = "v0.2.1" }
+hearthsound-plugin = { git = "https://github.com/hearthsound/plugin-sdk", tag = "v0.3.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ```
@@ -92,7 +92,7 @@ See `hearthsound/plugin-template-rust` for a ready-to-fork project.
 the repository head with:
 
 ```console
-cargo install --locked --git https://github.com/hearthsound/plugin-sdk --tag v0.2.1 hearthsound-plugin-cli
+cargo install --locked --git https://github.com/hearthsound/plugin-sdk --tag v0.3.0 hearthsound-plugin-cli
 ```
 
 Every command takes `--manifest <PATH>` (default `manifest.json`). Commands that
