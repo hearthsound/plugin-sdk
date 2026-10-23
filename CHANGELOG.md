@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The `hearthsound-plugin-verification` crate, which generates the
+  `verification` provider world and the `export_verification_provider!` macro.
+- The `hearthsound-plugin-scrobble-discovery-account-link` crate, which
+  generates the world for plugins that export `scrobble`, `discovery` and
+  `account-link` together, with the
+  `export_scrobble_discovery_link_provider!` macro.
+- The `hearthsound-plugin-process-acquisition` crate, which generates the
+  `acquisition` provider world with the `host-process` import and the
+  `export_process_acquisition_provider!` macro.
+- `hearthsound_plugin::host::process`, the bindings for the `host-process`
+  import an acquisition plugin runs external tools through.
 - The `scrobble` interface for now-playing updates, finished listens and
   love/hate feedback, exported through the `scrobble-provider` world.
 - The `discovery` interface for similar tracks and artists, artist top tracks,

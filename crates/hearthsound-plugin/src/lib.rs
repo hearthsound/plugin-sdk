@@ -21,6 +21,18 @@
 //! - [`acquisition_provider`] and [`export_acquisition_provider!`](crate::export_acquisition_provider)
 //!   for the `acquisition` layer, the only one that also imports
 //!   [`host::files`].
+//! - [`process_acquisition_provider`] and
+//!   [`export_process_acquisition_provider!`](crate::export_process_acquisition_provider)
+//!   for acquisition plugins that run an administrator-configured tool through
+//!   [`host::process`].
+//! - [`verification_provider`] and
+//!   [`export_verification_provider!`](crate::export_verification_provider)
+//!   for the `verification` layer: deciding whether a downloaded file is the
+//!   recording the server asked for.
+//! - [`scrobble_discovery_link_provider`] and
+//!   [`export_scrobble_discovery_link_provider!`](crate::export_scrobble_discovery_link_provider)
+//!   for plugins that report listening history, suggest music and link a
+//!   listener's account on the service.
 //! - [`catalog_artwork_provider`] and
 //!   [`export_catalog_artwork_provider!`](crate::export_catalog_artwork_provider),
 //!   and [`metadata_artwork_provider`] and
@@ -41,12 +53,15 @@
 //!
 //! | Crate | Contents |
 //! |---|---|
-//! | `hearthsound-plugin-bindings` | The `types` interface, the host imports and `host-files` |
+//! | `hearthsound-plugin-bindings` | The `types` interface, the host imports, `host-files` and `host-process` |
 //! | `hearthsound-plugin-metadata` | The `metadata` provider world |
 //! | `hearthsound-plugin-artwork` | The `artwork` provider world |
 //! | `hearthsound-plugin-metadata-artwork` | The `metadata` and `artwork` provider world |
 //! | `hearthsound-plugin-catalog-artwork` | The `catalog` and `artwork` provider world |
 //! | `hearthsound-plugin-acquisition` | The `acquisition` provider world |
+//! | `hearthsound-plugin-process-acquisition` | The `acquisition` provider world with the `host-process` import |
+//! | `hearthsound-plugin-verification` | The `verification` provider world |
+//! | `hearthsound-plugin-scrobble-discovery-account-link` | The `scrobble`, `discovery` and `account-link` provider world |
 //! | `hearthsound-plugin` | The `catalog` provider world, host wrappers, config and logging helpers, and the log macros |
 //!
 //! # Helpers
@@ -98,8 +113,10 @@ pub use hearthsound_plugin_bindings::types;
 /// tracing, [`http`](crate::host::http) for outbound HTTP,
 /// [`kv`](crate::host::kv) for key-value storage,
 /// [`config`](crate::host::config) for the instance's server-scoped
-/// configuration and [`files`](crate::host::files) for the file access an
-/// acquisition provider needs to report the files it produced.
+/// configuration, [`files`](crate::host::files) for the file access an
+/// acquisition provider needs to report the files it produced, and
+/// [`process`](crate::host::process) for the external tools an acquisition
+/// provider runs.
 #[doc(inline)]
 pub use hearthsound_plugin_bindings::host;
 
@@ -297,6 +314,103 @@ pub use hearthsound_plugin_acquisition::acquisition_provider;
 /// ```
 #[doc(inline)]
 pub use acquisition_provider::export_acquisition_provider;
+
+/// The acquisition provider world that also runs external tools.
+///
+/// The generated module tree contains the guest traits an acquisition plugin
+/// implements under `exports::hearthsound::plugin::{acquisition, lifecycle}`,
+/// plus the
+/// [`export_process_acquisition_provider!`](crate::export_process_acquisition_provider)
+/// macro that wires a type implementing them into the component's exports. The
+/// world imports `host-files` and `host-process`, available as [`host::files`]
+/// and [`host::process`].
+#[doc(inline)]
+pub use hearthsound_plugin_process_acquisition::process_acquisition_provider;
+
+/// Wires a tool-driven acquisition provider into the component's exports.
+///
+/// Pass a type that implements the
+/// `process_acquisition_provider::exports::hearthsound::plugin::lifecycle::Guest`
+/// and `...::acquisition::Guest` traits. The macro expands to the
+/// `#[unsafe(no_mangle)]` entry points the component model expects. The
+/// manifest must list every tool the plugin spawns under
+/// `permissions.process.tools`.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyAcquisition;
+/// // impl ...::lifecycle::Guest for MyAcquisition {}
+/// // impl ...::acquisition::Guest for MyAcquisition {}
+///
+/// hearthsound_plugin::export_process_acquisition_provider!(MyAcquisition);
+/// ```
+#[doc(inline)]
+pub use process_acquisition_provider::export_process_acquisition_provider;
+
+/// The verification provider world and its export macro.
+///
+/// The generated module tree contains the guest traits a verification plugin
+/// implements under `exports::hearthsound::plugin::{verification, lifecycle}`,
+/// plus the [`export_verification_provider!`](crate::export_verification_provider)
+/// macro that wires a type implementing them into the component's exports.
+#[doc(inline)]
+pub use hearthsound_plugin_verification::verification_provider;
+
+/// Wires a verification provider into the component's exports.
+///
+/// Pass a type that implements the
+/// `verification_provider::exports::hearthsound::plugin::lifecycle::Guest` and
+/// `verification_provider::exports::hearthsound::plugin::verification::Guest`
+/// traits. The macro expands to the `#[unsafe(no_mangle)]` entry points the
+/// component model expects.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyVerification;
+/// // impl ...::lifecycle::Guest for MyVerification {}
+/// // impl ...::verification::Guest for MyVerification {}
+///
+/// hearthsound_plugin::export_verification_provider!(MyVerification);
+/// ```
+#[doc(inline)]
+pub use verification_provider::export_verification_provider;
+
+/// The scrobble, discovery and account-link provider world.
+///
+/// The generated module tree contains the guest traits a plugin implements
+/// under `exports::hearthsound::plugin::{scrobble, discovery, account_link,
+/// lifecycle}`, plus the
+/// [`export_scrobble_discovery_link_provider!`](crate::export_scrobble_discovery_link_provider)
+/// macro that wires a type implementing them into the component's exports.
+/// `account-link` is a capability, not a layer: the manifest only declares the
+/// `scrobble` and `discovery` layers the plugin provides.
+#[doc(inline)]
+pub use hearthsound_plugin_scrobble_discovery_account_link::scrobble_discovery_link_provider;
+
+/// Wires a scrobbling, discovery and account-link provider into the
+/// component's exports.
+///
+/// Pass a type that implements the
+/// `scrobble_discovery_link_provider::exports::hearthsound::plugin::lifecycle::Guest`,
+/// `...::scrobble::Guest`, `...::discovery::Guest` and
+/// `...::account_link::Guest` traits. The macro expands to the
+/// `#[unsafe(no_mangle)]` entry points the component model expects.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyScrobbler;
+/// // impl ...::lifecycle::Guest for MyScrobbler {}
+/// // impl ...::scrobble::Guest for MyScrobbler {}
+/// // impl ...::discovery::Guest for MyScrobbler {}
+/// // impl ...::account_link::Guest for MyScrobbler {}
+///
+/// hearthsound_plugin::export_scrobble_discovery_link_provider!(MyScrobbler);
+/// ```
+#[doc(inline)]
+pub use scrobble_discovery_link_provider::export_scrobble_discovery_link_provider;
 
 /// Typed HTTP helpers over the `host-http` import.
 pub mod http;

@@ -9,6 +9,9 @@ members = [
     "crates/hearthsound-plugin-cli",
     "crates/hearthsound-plugin-metadata",
     "crates/hearthsound-plugin-metadata-artwork",
+    "crates/hearthsound-plugin-process-acquisition",
+    "crates/hearthsound-plugin-scrobble-discovery-account-link",
+    "crates/hearthsound-plugin-verification",
 ]
 exclude = ["examples/hello-catalog"]
 

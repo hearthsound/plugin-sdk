@@ -976,6 +976,9 @@ dependencies = [
  "hearthsound-plugin-catalog-artwork",
  "hearthsound-plugin-metadata",
  "hearthsound-plugin-metadata-artwork",
+ "hearthsound-plugin-process-acquisition",
+ "hearthsound-plugin-scrobble-discovery-account-link",
+ "hearthsound-plugin-verification",
  "serde",
  "serde_json",
  "wit-bindgen 0.62.0",
@@ -1037,6 +1040,30 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-metadata-artwork"
+version = "0.2.1"
+dependencies = [
+ "hearthsound-plugin-bindings",
+ "wit-bindgen 0.62.0",
+]
+
+[[package]]
+name = "hearthsound-plugin-process-acquisition"
+version = "0.2.1"
+dependencies = [
+ "hearthsound-plugin-bindings",
+ "wit-bindgen 0.62.0",
+]
+
+[[package]]
+name = "hearthsound-plugin-scrobble-discovery-account-link"
+version = "0.2.1"
+dependencies = [
+ "hearthsound-plugin-bindings",
+ "wit-bindgen 0.62.0",
+]
+
+[[package]]
+name = "hearthsound-plugin-verification"
 version = "0.2.1"
 dependencies = [
  "hearthsound-plugin-bindings",

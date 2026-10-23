@@ -19,6 +19,9 @@ is the single source of truth for the interface those components speak.
 | `crates/hearthsound-plugin-metadata-artwork` | The metadata and artwork provider world. |
 | `crates/hearthsound-plugin-catalog-artwork` | The catalog and artwork provider world. |
 | `crates/hearthsound-plugin-acquisition` | The acquisition provider world. |
+| `crates/hearthsound-plugin-process-acquisition` | The acquisition provider world with the `host-process` import, for plugins that run a configured tool. |
+| `crates/hearthsound-plugin-verification` | The verification provider world. |
+| `crates/hearthsound-plugin-scrobble-discovery-account-link` | The scrobble, discovery and account-link provider world. |
 | `crates/hearthsound-plugin-cli` | The `hsplugin` CLI: `new`, `build`, `check`, `pack`, `run` and `test`. |
 | `examples/hello-catalog` | A complete example plugin that answers every search with a greeting. |
 

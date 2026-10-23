@@ -14,6 +14,9 @@ hearthsound-plugin-bindings = { path = "../hearthsound-plugin-bindings" }
 hearthsound-plugin-catalog-artwork = { path = "../hearthsound-plugin-catalog-artwork" }
 hearthsound-plugin-metadata = { path = "../hearthsound-plugin-metadata" }
 hearthsound-plugin-metadata-artwork = { path = "../hearthsound-plugin-metadata-artwork" }
+hearthsound-plugin-process-acquisition = { path = "../hearthsound-plugin-process-acquisition" }
+hearthsound-plugin-scrobble-discovery-account-link = { path = "../hearthsound-plugin-scrobble-discovery-account-link" }
+hearthsound-plugin-verification = { path = "../hearthsound-plugin-verification" }
 wit-bindgen.workspace = true
 serde.workspace = true
 serde_json.workspace = true

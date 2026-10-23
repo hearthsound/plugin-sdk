@@ -46,6 +46,27 @@ mod host_files_bindings {
     });
 }
 
+/// Bindings for the `host-process` import, which only acquisition providers
+/// that run tool processes use.
+///
+/// Like `host-files`, the interface is not part of the base world, so it is
+/// generated on its own from a minimal internal world and re-exported as
+/// [`host::process`](crate::host::process).
+#[allow(missing_docs, unsafe_code, clippy::all)]
+mod host_process_bindings {
+    wit_bindgen::generate!({
+        path: "../../wit",
+        inline: "
+            package hearthsound:sdk@0.3.0;
+            world host-process {
+                import hearthsound:plugin/host-process@0.3.0;
+            }
+        ",
+        world: "hearthsound:sdk/host-process",
+        generate_all,
+    });
+}
+
 /// Shared record types of the `hearthsound:plugin@0.3.0` package.
 ///
 /// This re-exports the generated `types` interface, which holds the records
@@ -60,12 +81,15 @@ pub use bindings::hearthsound::plugin::types;
 /// tracing, [`http`](crate::host::http) for outbound HTTP,
 /// [`kv`](crate::host::kv) for key-value storage,
 /// [`config`](crate::host::config) for the instance's server-scoped
-/// configuration and [`files`](crate::host::files) for the file access an
-/// acquisition provider needs to report the files it produced.
+/// configuration, [`files`](crate::host::files) for the file access an
+/// acquisition provider needs to report the files it produced, and
+/// [`process`](crate::host::process) for the external tools an acquisition
+/// provider runs.
 pub mod host {
     pub use crate::bindings::hearthsound::plugin::host_config as config;
     pub use crate::bindings::hearthsound::plugin::host_http as http;
     pub use crate::bindings::hearthsound::plugin::host_kv as kv;
     pub use crate::bindings::hearthsound::plugin::host_log as log;
     pub use crate::host_files_bindings::hearthsound::plugin::host_files as files;
+    pub use crate::host_process_bindings::hearthsound::plugin::host_process as process;
 }
