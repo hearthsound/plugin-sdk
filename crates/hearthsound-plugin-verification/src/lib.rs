@@ -1,4 +1,4 @@
-//! The verification provider world of the `hearthsound:plugin@0.3.0` WIT
+//! The verification provider world of the `hearthsound:plugin@0.4.0` WIT
 //! package.
 //!
 //! A verification plugin decides whether a downloaded file is the recording the
@@ -29,11 +29,11 @@ pub mod verification_provider {
         path: "../../wit",
         world: "hearthsound:plugin/verification-provider",
         with: {
-            "hearthsound:plugin/types@0.3.0": hearthsound_plugin_bindings::types,
-            "hearthsound:plugin/host-log@0.3.0": hearthsound_plugin_bindings::host::log,
-            "hearthsound:plugin/host-http@0.3.0": hearthsound_plugin_bindings::host::http,
-            "hearthsound:plugin/host-kv@0.3.0": hearthsound_plugin_bindings::host::kv,
-            "hearthsound:plugin/host-config@0.3.0": hearthsound_plugin_bindings::host::config,
+            "hearthsound:plugin/types@0.4.0": hearthsound_plugin_bindings::types,
+            "hearthsound:plugin/host-log@0.4.0": hearthsound_plugin_bindings::host::log,
+            "hearthsound:plugin/host-http@0.4.0": hearthsound_plugin_bindings::host::http,
+            "hearthsound:plugin/host-kv@0.4.0": hearthsound_plugin_bindings::host::kv,
+            "hearthsound:plugin/host-config@0.4.0": hearthsound_plugin_bindings::host::config,
         },
         generate_all,
         pub_export_macro: true,

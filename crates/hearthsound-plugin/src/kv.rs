@@ -44,16 +44,27 @@ use crate::types::ProviderError;
 ///
 /// # Errors
 ///
-/// This function does not fail; the [`ProviderError`] result leaves room for a
-/// host error the `host-kv` interface may report on reads later.
+/// Returns [`ProviderError::Internal`] when the host cannot read the store at
+/// all. That is a storage failure, not a miss, so it is reported instead of
+/// being folded into `None`; the reason is the host's safe description of the
+/// failure, not the database error.
 pub fn get_json<T: DeserializeOwned>(key: &str) -> Result<Option<T>, ProviderError> {
-    let Some(bytes) = kv::get(key) else {
+    let bytes = match kv::get(key) {
+        Ok(bytes) => bytes,
+        Err(reason) => return Err(map_read_error(reason)),
+    };
+    let Some(bytes) = bytes else {
         return Ok(None);
     };
     match serde_json::from_slice(&bytes) {
         Ok(value) => Ok(Some(value)),
         Err(_) => Ok(None),
     }
+}
+
+/// Maps a `host-kv` read failure to the provider error a plugin reports.
+fn map_read_error(reason: String) -> ProviderError {
+    ProviderError::Internal(reason)
 }
 
 /// Serializes `value` to JSON and stores it under `key`.
@@ -82,4 +93,19 @@ pub fn set_json<T: Serialize>(
 ) -> Result<(), ProviderError> {
     let bytes = serde_json::to_vec(value).map_err(|e| ProviderError::Internal(format!("{e}")))?;
     kv::set(key, &bytes, ttl_ms).map_err(ProviderError::Internal)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A read failure becomes the provider error a plugin reports, with the
+    /// host's own reason passed through unchanged.
+    #[test]
+    fn a_read_failure_becomes_an_internal_error() {
+        match map_read_error("x".to_string()) {
+            ProviderError::Internal(reason) => assert_eq!(reason, "x"),
+            other => panic!("expected Internal, got {other:?}"),
+        }
+    }
 }

@@ -51,6 +51,8 @@ fn hello_artist() -> Artist {
         name: "Hello Artist".to_string(),
         images: vec![],
         ids: vec![],
+        // The greeting catalog reports no album count.
+        album_count: None,
     }
 }
 

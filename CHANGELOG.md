@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-25
+
+### Added
+
+- `artist.album-count` on the `types.artist` record, the provider's own album
+  count for an artist.
+
+### Changed
+
+- `host-kv.get` returns `result<option<list<u8>>, string>`, so a plugin can
+  tell a missing key from a storage failure;
+  `hearthsound_plugin::kv::get_json` maps a read failure to
+  `ProviderError::Internal`. The WIT package version is now `0.4.0`, so the API
+  string a manifest declares and a component is checked against is
+  `hearthsound:plugin@0.4.0`.
+
 ## [0.3.0] - 2026-10-23
 
 ### Added
@@ -139,7 +155,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An `hsplugin pack` subcommand that writes a validated plugin to a
   `.hsplugin` archive.
 
-[Unreleased]: https://github.com/hearthsound/plugin-sdk/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/hearthsound/plugin-sdk/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/hearthsound/plugin-sdk/releases/tag/v0.4.0
 [0.3.0]: https://github.com/hearthsound/plugin-sdk/releases/tag/v0.3.0
 [0.2.1]: https://github.com/hearthsound/plugin-sdk/releases/tag/v0.2.1
 [0.2.0]: https://github.com/hearthsound/plugin-sdk/releases/tag/v0.2.0

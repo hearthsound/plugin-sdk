@@ -1,4 +1,4 @@
-//! The artwork provider world of the `hearthsound:plugin@0.3.0` WIT package.
+//! The artwork provider world of the `hearthsound:plugin@0.4.0` WIT package.
 //!
 //! An artwork plugin implements the guest traits generated in
 //! [`artwork_provider`] and hands its type to the export macro; plugins depend
@@ -27,11 +27,11 @@ pub mod artwork_provider {
         path: "../../wit",
         world: "hearthsound:plugin/artwork-provider",
         with: {
-            "hearthsound:plugin/types@0.3.0": hearthsound_plugin_bindings::types,
-            "hearthsound:plugin/host-log@0.3.0": hearthsound_plugin_bindings::host::log,
-            "hearthsound:plugin/host-http@0.3.0": hearthsound_plugin_bindings::host::http,
-            "hearthsound:plugin/host-kv@0.3.0": hearthsound_plugin_bindings::host::kv,
-            "hearthsound:plugin/host-config@0.3.0": hearthsound_plugin_bindings::host::config,
+            "hearthsound:plugin/types@0.4.0": hearthsound_plugin_bindings::types,
+            "hearthsound:plugin/host-log@0.4.0": hearthsound_plugin_bindings::host::log,
+            "hearthsound:plugin/host-http@0.4.0": hearthsound_plugin_bindings::host::http,
+            "hearthsound:plugin/host-kv@0.4.0": hearthsound_plugin_bindings::host::kv,
+            "hearthsound:plugin/host-config@0.4.0": hearthsound_plugin_bindings::host::config,
         },
         generate_all,
         pub_export_macro: true,

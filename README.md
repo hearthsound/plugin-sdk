@@ -12,7 +12,7 @@ speak.
 
 | Path | Contents |
 |---|---|
-| `wit/` | The `hearthsound:plugin@0.3.0` WIT package. |
+| `wit/` | The `hearthsound:plugin@0.4.0` WIT package. |
 | `crates/hearthsound-plugin` | The Rust SDK a plugin depends on: the catalog provider world, host wrappers, the logging, config, HTTP and KV helpers, and the export macros. |
 | `crates/hearthsound-plugin-bindings` | The shared `types` and host-import bindings every provider world remaps to. |
 | `crates/hearthsound-plugin-metadata` | The metadata provider world. |
@@ -32,10 +32,14 @@ Add the SDK as a dependency and export a provider:
 
 ```toml
 [dependencies]
-hearthsound-plugin = { git = "https://github.com/hearthsound/plugin-sdk", tag = "v0.3.0" }
+hearthsound-plugin = { git = "https://github.com/hearthsound/plugin-sdk", tag = "v0.4.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ```
+
+The SDK and `hsplugin` check the API version they were built against. A plugin
+for `hearthsound:plugin@0.3.0` is built and checked with `tag = "v0.3.0"`; the
+server loads both 0.4.0 and 0.3.0 components.
 
 One export macro per provider layer:
 
@@ -92,7 +96,7 @@ See `hearthsound/plugin-template-rust` for a ready-to-fork project.
 the repository head with:
 
 ```console
-cargo install --locked --git https://github.com/hearthsound/plugin-sdk --tag v0.3.0 hearthsound-plugin-cli
+cargo install --locked --git https://github.com/hearthsound/plugin-sdk --tag v0.4.0 hearthsound-plugin-cli
 ```
 
 Every command takes `--manifest <PATH>` (default `manifest.json`). Commands that
@@ -188,8 +192,10 @@ temporary staging directory; a process table that runs at most four tools at
 once, clears the environment except `PATH`, `HOME` and the entries the plugin
 supplies, keeps at most 1 MiB unread per stream and kills a tool once its
 timeout passes; a key-value store of 256 KiB per value with a
-1 MiB default quota; and HTTP only to hosts in the manifest allowlist (an exact
-host, `*.domain`, or a host named by `$config:<field>`), with a 10 second
+1 MiB default quota, where a read always answers `none` for a miss because the
+mock host has no storage that can fail, while a server reports a storage
+failure as `err(reason)`; and HTTP only to hosts in the manifest allowlist (an
+exact host, `*.domain`, or a host named by `$config:<field>`), with a 10 second
 default timeout capped at 60 seconds, at most 5 redirects and a 10 MiB body cap.
 `server-config()` is the `--config` document with the manifest schema defaults
 filled in. The mock host is an independent implementation of these limits, not

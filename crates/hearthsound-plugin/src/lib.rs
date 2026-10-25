@@ -1,7 +1,7 @@
 //! Rust SDK for building Hearthsound plugins.
 //!
 //! A Hearthsound plugin is a WebAssembly component that speaks the
-//! `hearthsound:plugin@0.3.0` WIT package. This crate re-exports the bindings
+//! `hearthsound:plugin@0.4.0` WIT package. This crate re-exports the bindings
 //! for that package, generates the catalog world, and provides the host-import
 //! wrappers and logging macros a plugin implementation needs. It is the only
 //! crate a plugin depends on.
@@ -98,7 +98,7 @@
 //!
 //! See `examples/hello-catalog` in this repository for a complete plugin.
 
-/// Shared record types of the `hearthsound:plugin@0.3.0` package.
+/// Shared record types of the `hearthsound:plugin@0.4.0` package.
 ///
 /// This re-exports the generated `types` interface, which holds the records
 /// every provider interface shares: `IdPair`, `ArtistCredit`, `Image`,
@@ -132,11 +132,11 @@ pub mod catalog_provider {
         path: "../../wit",
         world: "hearthsound:plugin/catalog-provider",
         with: {
-            "hearthsound:plugin/types@0.3.0": hearthsound_plugin_bindings::types,
-            "hearthsound:plugin/host-log@0.3.0": hearthsound_plugin_bindings::host::log,
-            "hearthsound:plugin/host-http@0.3.0": hearthsound_plugin_bindings::host::http,
-            "hearthsound:plugin/host-kv@0.3.0": hearthsound_plugin_bindings::host::kv,
-            "hearthsound:plugin/host-config@0.3.0": hearthsound_plugin_bindings::host::config,
+            "hearthsound:plugin/types@0.4.0": hearthsound_plugin_bindings::types,
+            "hearthsound:plugin/host-log@0.4.0": hearthsound_plugin_bindings::host::log,
+            "hearthsound:plugin/host-http@0.4.0": hearthsound_plugin_bindings::host::http,
+            "hearthsound:plugin/host-kv@0.4.0": hearthsound_plugin_bindings::host::kv,
+            "hearthsound:plugin/host-config@0.4.0": hearthsound_plugin_bindings::host::config,
         },
         generate_all,
         pub_export_macro: true,

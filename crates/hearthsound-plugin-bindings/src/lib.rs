@@ -1,4 +1,4 @@
-//! Shared bindings for the `hearthsound:plugin@0.3.0` WIT package.
+//! Shared bindings for the `hearthsound:plugin@0.4.0` WIT package.
 //!
 //! Every provider world imports the same `types` interface and the same host
 //! interfaces, and every provider world exports `lifecycle`. This crate
@@ -36,9 +36,9 @@ mod host_files_bindings {
     wit_bindgen::generate!({
         path: "../../wit",
         inline: "
-            package hearthsound:sdk@0.3.0;
+            package hearthsound:sdk@0.4.0;
             world host-files {
-                import hearthsound:plugin/host-files@0.3.0;
+                import hearthsound:plugin/host-files@0.4.0;
             }
         ",
         world: "hearthsound:sdk/host-files",
@@ -57,9 +57,9 @@ mod host_process_bindings {
     wit_bindgen::generate!({
         path: "../../wit",
         inline: "
-            package hearthsound:sdk@0.3.0;
+            package hearthsound:sdk@0.4.0;
             world host-process {
-                import hearthsound:plugin/host-process@0.3.0;
+                import hearthsound:plugin/host-process@0.4.0;
             }
         ",
         world: "hearthsound:sdk/host-process",
@@ -67,7 +67,7 @@ mod host_process_bindings {
     });
 }
 
-/// Shared record types of the `hearthsound:plugin@0.3.0` package.
+/// Shared record types of the `hearthsound:plugin@0.4.0` package.
 ///
 /// This re-exports the generated `types` interface, which holds the records
 /// every provider interface shares: `IdPair`, `ArtistCredit`, `Image`,

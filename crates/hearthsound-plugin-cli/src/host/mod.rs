@@ -241,8 +241,8 @@ impl host_http::Host for HostState {
 }
 
 impl host_kv::Host for HostState {
-    fn get(&mut self, key: String) -> Option<Vec<u8>> {
-        self.kv.get(&key)
+    fn get(&mut self, key: String) -> Result<Option<Vec<u8>>, String> {
+        Ok(self.kv.get(&key))
     }
 
     fn set(&mut self, key: String, value: Vec<u8>, ttl_ms: Option<u64>) -> Result<(), String> {

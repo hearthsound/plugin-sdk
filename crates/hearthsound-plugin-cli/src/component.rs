@@ -12,7 +12,7 @@ use wasmtime::component::Component;
 use wasmtime::component::types::ComponentItem;
 
 /// Version of the `hearthsound:plugin` package every plugin targets.
-pub(crate) const API_VERSION: &str = "0.3.0";
+pub(crate) const API_VERSION: &str = "0.4.0";
 
 /// Host interfaces every plugin may import.
 const COMMON_HOST_INTERFACES: [&str; 5] = [
@@ -30,7 +30,7 @@ const HOST_FILES: &str = "hearthsound:plugin/host-files";
 const HOST_PROCESS: &str = "hearthsound:plugin/host-process";
 
 /// The supported plugin API version, as it appears in a manifest.
-const SUPPORTED_API: &str = "hearthsound:plugin@0.3.0";
+const SUPPORTED_API: &str = "hearthsound:plugin@0.4.0";
 
 /// WASI packages plugins may import, provided by `wasmtime-wasi`.
 const WASI_PACKAGES: [&str; 6] = [
@@ -104,12 +104,18 @@ pub fn check(engine: &Engine, component: &Component, manifest: &Value, errors: &
         }
         let (interface, version) = split_version(name);
         let item = interface.strip_prefix("hearthsound:plugin/");
+        if item.is_some() && version != API_VERSION {
+            errors.push(format!(
+                "component export `{name}` is not built for `hearthsound:plugin@{API_VERSION}`"
+            ));
+            continue;
+        }
         match item {
-            Some(LIFECYCLE_INTERFACE) if version == API_VERSION => exports_lifecycle = true,
-            Some(layer) if version == API_VERSION && CAPABILITY_INTERFACES.contains(&layer) => {
+            Some(LIFECYCLE_INTERFACE) => exports_lifecycle = true,
+            Some(layer) if CAPABILITY_INTERFACES.contains(&layer) => {
                 exported_layers.push(layer.to_string());
             }
-            Some(ACCOUNT_LINK_INTERFACE) if version == API_VERSION => {
+            Some(ACCOUNT_LINK_INTERFACE) => {
                 if !account_link_allowed(&provides) {
                     errors.push(format!(
                         "component exports `{name}` but the manifest does not declare the `scrobble` or `discovery` layer"
@@ -280,8 +286,8 @@ mod tests {
             &engine,
             &[],
             &[
-                "hearthsound:plugin/lifecycle@0.3.0",
-                "hearthsound:plugin/artwork@0.3.0",
+                "hearthsound:plugin/lifecycle@0.4.0",
+                "hearthsound:plugin/artwork@0.4.0",
             ],
         );
         let errors = errors(&component, &manifest(&["artwork"], &[]));
@@ -296,8 +302,8 @@ mod tests {
             &engine,
             &[],
             &[
-                "hearthsound:plugin/lifecycle@0.3.0",
-                "hearthsound:plugin/artwork@0.3.0",
+                "hearthsound:plugin/lifecycle@0.4.0",
+                "hearthsound:plugin/artwork@0.4.0",
             ],
         );
         let errors = errors(&component, &manifest(&[], &[]));
@@ -309,8 +315,8 @@ mod tests {
         );
     }
 
-    /// An `artwork` export of another API version is not an interface the
-    /// server knows.
+    /// An `artwork` export of another API version is not an interface this
+    /// tool checks.
     #[test]
     fn an_artwork_export_of_another_version_is_rejected() {
         let engine = Engine::default();
@@ -318,7 +324,7 @@ mod tests {
             &engine,
             &[],
             &[
-                "hearthsound:plugin/lifecycle@0.3.0",
+                "hearthsound:plugin/lifecycle@0.4.0",
                 "hearthsound:plugin/artwork@0.1.0",
             ],
         );
@@ -326,7 +332,32 @@ mod tests {
         assert!(
             errors
                 .iter()
-                .any(|error| error.contains("is not a supported hearthsound:plugin interface")),
+                .any(|error| error.contains("is not built for `hearthsound:plugin@0.4.0`")),
+            "{errors:?}"
+        );
+    }
+
+    /// A component built for the previous API is rejected by name, even when
+    /// its manifest declares the current one.
+    #[test]
+    fn a_component_of_the_previous_api_is_rejected() {
+        let engine = Engine::default();
+        let component = component(
+            &engine,
+            &[],
+            &[
+                "hearthsound:plugin/lifecycle@0.3.0",
+                "hearthsound:plugin/catalog@0.3.0",
+            ],
+        );
+        let manifest = json!({
+            "api": "hearthsound:plugin@0.4.0",
+            "provides": ["catalog"],
+        });
+        let errors = errors(&component, &manifest);
+        assert!(
+            errors.iter().any(|error| error
+                .contains("component export `hearthsound:plugin/catalog@0.3.0` is not built for `hearthsound:plugin@0.4.0`")),
             "{errors:?}"
         );
     }
@@ -339,9 +370,9 @@ mod tests {
             &engine,
             &[],
             &[
-                "hearthsound:plugin/lifecycle@0.3.0",
-                "hearthsound:plugin/scrobble@0.3.0",
-                "hearthsound:plugin/account-link@0.3.0",
+                "hearthsound:plugin/lifecycle@0.4.0",
+                "hearthsound:plugin/scrobble@0.4.0",
+                "hearthsound:plugin/account-link@0.4.0",
             ],
         );
         let errors = errors(&component, &manifest(&["scrobble"], &[]));
@@ -356,9 +387,9 @@ mod tests {
             &engine,
             &[],
             &[
-                "hearthsound:plugin/lifecycle@0.3.0",
-                "hearthsound:plugin/discovery@0.3.0",
-                "hearthsound:plugin/account-link@0.3.0",
+                "hearthsound:plugin/lifecycle@0.4.0",
+                "hearthsound:plugin/discovery@0.4.0",
+                "hearthsound:plugin/account-link@0.4.0",
             ],
         );
         let errors = errors(&component, &manifest(&["discovery"], &[]));
@@ -373,9 +404,9 @@ mod tests {
             &engine,
             &[],
             &[
-                "hearthsound:plugin/lifecycle@0.3.0",
-                "hearthsound:plugin/catalog@0.3.0",
-                "hearthsound:plugin/account-link@0.3.0",
+                "hearthsound:plugin/lifecycle@0.4.0",
+                "hearthsound:plugin/catalog@0.4.0",
+                "hearthsound:plugin/account-link@0.4.0",
             ],
         );
         let errors = errors(&component, &manifest(&["catalog"], &[]));
@@ -393,10 +424,10 @@ mod tests {
         let engine = Engine::default();
         let component = component(
             &engine,
-            &["hearthsound:plugin/host-process@0.3.0"],
+            &["hearthsound:plugin/host-process@0.4.0"],
             &[
-                "hearthsound:plugin/lifecycle@0.3.0",
-                "hearthsound:plugin/acquisition@0.3.0",
+                "hearthsound:plugin/lifecycle@0.4.0",
+                "hearthsound:plugin/acquisition@0.4.0",
             ],
         );
         let errors = errors(&component, &manifest(&["acquisition"], &["yt-dlp"]));
@@ -409,10 +440,10 @@ mod tests {
         let engine = Engine::default();
         let component = component(
             &engine,
-            &["hearthsound:plugin/host-process@0.3.0"],
+            &["hearthsound:plugin/host-process@0.4.0"],
             &[
-                "hearthsound:plugin/lifecycle@0.3.0",
-                "hearthsound:plugin/acquisition@0.3.0",
+                "hearthsound:plugin/lifecycle@0.4.0",
+                "hearthsound:plugin/acquisition@0.4.0",
             ],
         );
         let errors = errors(&component, &manifest(&["acquisition"], &[]));
@@ -431,8 +462,8 @@ mod tests {
         let engine = Engine::default();
         let component = component(
             &engine,
-            &["hearthsound:plugin/host-process@0.3.0"],
-            &["hearthsound:plugin/lifecycle@0.3.0"],
+            &["hearthsound:plugin/host-process@0.4.0"],
+            &["hearthsound:plugin/lifecycle@0.4.0"],
         );
         let errors = errors(&component, &manifest(&[], &["yt-dlp"]));
         assert!(

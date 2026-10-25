@@ -5,6 +5,10 @@
 //! `permissions.kv.maxBytes` budget (1 MiB when the manifest sets none). The
 //! budget counts key and value bytes together. Entries written with a
 //! time-to-live disappear once it elapses.
+//!
+//! The mock host cannot fail a read: the store is memory that a live instance
+//! always has, so [`Kv::get`] answers `ok(none)` for a miss and never returns
+//! the `err(reason)` a server reports when its database is unavailable.
 
 use std::collections::HashMap;
 use std::time::{Duration, Instant};

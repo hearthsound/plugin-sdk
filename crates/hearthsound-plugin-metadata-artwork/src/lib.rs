@@ -1,4 +1,4 @@
-//! The metadata and artwork provider world of the `hearthsound:plugin@0.3.0`
+//! The metadata and artwork provider world of the `hearthsound:plugin@0.4.0`
 //! WIT package.
 //!
 //! A plugin that both resolves recordings and finds cover images implements the
@@ -29,19 +29,19 @@ pub mod metadata_artwork_provider {
     wit_bindgen::generate!({
         path: "../../wit",
         inline: "
-            package hearthsound:sdk@0.3.0;
+            package hearthsound:sdk@0.4.0;
             world metadata-artwork-provider {
-                include hearthsound:plugin/metadata-provider@0.3.0;
-                export hearthsound:plugin/artwork@0.3.0;
+                include hearthsound:plugin/metadata-provider@0.4.0;
+                export hearthsound:plugin/artwork@0.4.0;
             }
         ",
         world: "hearthsound:sdk/metadata-artwork-provider",
         with: {
-            "hearthsound:plugin/types@0.3.0": hearthsound_plugin_bindings::types,
-            "hearthsound:plugin/host-log@0.3.0": hearthsound_plugin_bindings::host::log,
-            "hearthsound:plugin/host-http@0.3.0": hearthsound_plugin_bindings::host::http,
-            "hearthsound:plugin/host-kv@0.3.0": hearthsound_plugin_bindings::host::kv,
-            "hearthsound:plugin/host-config@0.3.0": hearthsound_plugin_bindings::host::config,
+            "hearthsound:plugin/types@0.4.0": hearthsound_plugin_bindings::types,
+            "hearthsound:plugin/host-log@0.4.0": hearthsound_plugin_bindings::host::log,
+            "hearthsound:plugin/host-http@0.4.0": hearthsound_plugin_bindings::host::http,
+            "hearthsound:plugin/host-kv@0.4.0": hearthsound_plugin_bindings::host::kv,
+            "hearthsound:plugin/host-config@0.4.0": hearthsound_plugin_bindings::host::config,
         },
         generate_all,
         pub_export_macro: true,

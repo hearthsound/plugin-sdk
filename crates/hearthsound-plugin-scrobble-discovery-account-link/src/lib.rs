@@ -1,5 +1,5 @@
 //! The scrobble, discovery and account-link provider world of the
-//! `hearthsound:plugin@0.3.0` WIT package.
+//! `hearthsound:plugin@0.4.0` WIT package.
 //!
 //! A plugin that reports listening history, suggests music and links a
 //! listener's account on the service implements the guest traits generated in
@@ -32,21 +32,21 @@ pub mod scrobble_discovery_link_provider {
     wit_bindgen::generate!({
         path: "../../wit",
         inline: "
-            package hearthsound:sdk@0.3.0;
+            package hearthsound:sdk@0.4.0;
             world scrobble-discovery-link-provider {
-                include hearthsound:plugin/base@0.3.0;
-                export hearthsound:plugin/scrobble@0.3.0;
-                export hearthsound:plugin/discovery@0.3.0;
-                export hearthsound:plugin/account-link@0.3.0;
+                include hearthsound:plugin/base@0.4.0;
+                export hearthsound:plugin/scrobble@0.4.0;
+                export hearthsound:plugin/discovery@0.4.0;
+                export hearthsound:plugin/account-link@0.4.0;
             }
         ",
         world: "hearthsound:sdk/scrobble-discovery-link-provider",
         with: {
-            "hearthsound:plugin/types@0.3.0": hearthsound_plugin_bindings::types,
-            "hearthsound:plugin/host-log@0.3.0": hearthsound_plugin_bindings::host::log,
-            "hearthsound:plugin/host-http@0.3.0": hearthsound_plugin_bindings::host::http,
-            "hearthsound:plugin/host-kv@0.3.0": hearthsound_plugin_bindings::host::kv,
-            "hearthsound:plugin/host-config@0.3.0": hearthsound_plugin_bindings::host::config,
+            "hearthsound:plugin/types@0.4.0": hearthsound_plugin_bindings::types,
+            "hearthsound:plugin/host-log@0.4.0": hearthsound_plugin_bindings::host::log,
+            "hearthsound:plugin/host-http@0.4.0": hearthsound_plugin_bindings::host::http,
+            "hearthsound:plugin/host-kv@0.4.0": hearthsound_plugin_bindings::host::kv,
+            "hearthsound:plugin/host-config@0.4.0": hearthsound_plugin_bindings::host::config,
         },
         generate_all,
         pub_export_macro: true,
