@@ -220,6 +220,12 @@ checks with `component does not export ...`.
 (`hsplugin test acquisition --tool yt-dlp=/usr/bin/yt-dlp`); without a mapping
 such a tool is `not-configured`.
 
+The `acquisition` suite searches at the granularity the plugin advertises: it
+reads `get-capabilities` first and sends a `track` search, or an `album` search
+when the plugin offers album granularity only, so an album-only provider is
+exercised with the query it accepts. A capability list with neither granularity
+fails the first check with the list it declared.
+
 Checks, by suite:
 
 - `catalog` (12 checks): `validate-config` accepts the config; it rejects
@@ -234,11 +240,12 @@ Checks, by suite:
  result, and none is allowed.
 - `artwork` (4 checks): `find-artwork` for track, album and artist subjects
  returns a list or `not-found`; a playlist subject returns an empty list.
-- `acquisition` (4 checks): `get-capabilities` lists granularities;
- `start-search` on a generic track query returns a token; `poll-search` reaches
- `complete` or a provider error within 30 seconds, where a provider error is the
- failed state because the `search-state` variant has no failed case; an unknown
- token is answered with a provider error.
+- `acquisition` (4 checks): `get-capabilities` lists granularities, and one of
+ them is `track` or `album`; `start-search` on a generic query of the chosen
+ granularity returns a token; `poll-search` reaches `complete` or a provider
+ error within 30 seconds, where a provider error is the failed state because the
+ `search-state` variant has no failed case; an unknown token is answered with a
+ provider error.
 - `scrobble` (2 checks): `get-limits` reports a `max-batch` of at least 1 and a
  `min-interval-ms` of at most 60000, so a host can batch listens without
  flooding the service.
@@ -248,9 +255,10 @@ Checks, by suite:
  verdict with a score from 0 to 1.
 
 The acquisition, scrobble, discovery and verification suites are compiled and
-clippy-checked. Only `acquisition` runs against a plugin: the CLI test fixture
-under `crates/hearthsound-plugin-cli/tests/fixtures/process-acquisition` spawns
-a tool in `start-search`, so the `--tool` mapping is covered. The scrobble,
+clippy-checked. Only `acquisition` runs against a plugin, through two CLI test
+fixtures under `crates/hearthsound-plugin-cli/tests/fixtures/`: one spawns a
+tool in `start-search`, which covers the `--tool` mapping, and one advertises
+album granularity only, which covers the granularity choice. The scrobble,
 discovery and verification results are unverified until a real provider plugin
 runs them.
 

@@ -1,0 +1,16 @@
+[package]
+name = "album-acquisition-fixture"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+license = "MIT OR Apache-2.0"
+description = "An album-only acquisition fixture for the hsplugin test CLI tests"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+hearthsound-plugin = { path = "../../../../../crates/hearthsound-plugin" }
+
+[workspace]

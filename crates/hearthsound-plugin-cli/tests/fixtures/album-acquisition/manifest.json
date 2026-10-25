@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 1,
+  "id": "com.example.album-acquisition",
+  "name": "Album acquisition fixture",
+  "version": "0.1.0",
+  "description": "A test fixture that advertises album granularity only.",
+  "authors": ["Hearthsound contributors"],
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/hearthsound/plugin-sdk",
+  "api": "hearthsound:plugin@0.4.0",
+  "provides": ["acquisition"],
+  "permissions": {},
+  "config": {
+    "server": null,
+    "user": null
+  },
+  "resources": { "memoryMb": 64, "callTimeoutMs": 5000, "maxInstances": 1 }
+}

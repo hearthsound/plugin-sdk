@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hsplugin test` accepts repeatable `--tool <name>=<path>` mappings, parsed
   like `hsplugin run`'s, so the `acquisition` suite runs a plugin that spawns a
   tool instead of reporting it as `not-configured`.
+- The `acquisition` suite reads `get-capabilities` before it searches and uses
+  the granularity the plugin advertises, `track` when it offers both and
+  `album` for an album-only provider; a capability list with neither fails the
+  first check.
 
 ## [0.4.0] - 2026-10-25
 

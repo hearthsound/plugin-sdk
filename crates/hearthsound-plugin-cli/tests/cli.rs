@@ -633,3 +633,60 @@ fn test_acquisition_suite_without_a_tool_mapping_fails_the_start_check() {
         "unexpected stdout: {stdout}"
     );
 }
+
+/// Returns the path of the album-only fixture's manifest.
+fn album_fixture_manifest() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/album-acquisition/manifest.json")
+}
+
+/// Builds the album-only fixture once and returns its component.
+fn album_fixture_wasm() -> &'static Path {
+    static WASM: LazyLock<PathBuf> = LazyLock::new(|| {
+        let target = Path::new(env!("CARGO_TARGET_TMPDIR")).join("album-acquisition");
+        let status = Command::new(cargo())
+            .arg("build")
+            .arg("--release")
+            .arg("--target")
+            .arg("wasm32-wasip2")
+            .arg("--manifest-path")
+            .arg(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/album-acquisition/Cargo.toml"),
+            )
+            .arg("--target-dir")
+            .arg(&target)
+            .status()
+            .expect("cargo build runs");
+        assert!(status.success(), "building the album fixture failed");
+        target.join("wasm32-wasip2/release/album_acquisition_fixture.wasm")
+    });
+    &WASM
+}
+
+#[test]
+fn test_acquisition_suite_searches_an_album_only_plugin() {
+    let manifest = album_fixture_manifest();
+    let output = hsplugin(&[
+        "test",
+        "acquisition",
+        "--manifest",
+        arg(&manifest),
+        "--wasm",
+        arg(album_fixture_wasm()),
+    ]);
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "unexpected failure: {stdout}");
+    assert!(
+        stdout.contains("ok 1: get-capabilities lists granularities"),
+        "unexpected stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("ok 2: start-search returns a token"),
+        "unexpected stdout: {stdout}"
+    );
+    assert!(
+        !stdout.contains("error "),
+        "unexpected error line: {stdout}"
+    );
+}
