@@ -214,6 +214,12 @@ host. The layer is `catalog`, `metadata`, `artwork`, `acquisition`, `scrobble`,
 passes and 1 otherwise. A layer the component does not export fails each of its
 checks with `component does not export ...`.
 
+`--tool <name>=<path>` (repeatable) maps a tool name to the executable the
+`host-process` import starts, as it does for `hsplugin run`, so the
+`acquisition` suite runs a plugin that spawns a tool
+(`hsplugin test acquisition --tool yt-dlp=/usr/bin/yt-dlp`); without a mapping
+such a tool is `not-configured`.
+
 Checks, by suite:
 
 - `catalog` (12 checks): `validate-config` accepts the config; it rejects
@@ -242,9 +248,11 @@ Checks, by suite:
  verdict with a score from 0 to 1.
 
 The acquisition, scrobble, discovery and verification suites are compiled and
-clippy-checked but not verified against a plugin: no fixture in this repository
-exports those layers, and none was added for them. Their results are unverified
-until a real provider plugin runs them.
+clippy-checked. Only `acquisition` runs against a plugin: the CLI test fixture
+under `crates/hearthsound-plugin-cli/tests/fixtures/process-acquisition` spawns
+a tool in `start-search`, so the `--tool` mapping is covered. The scrobble,
+discovery and verification results are unverified until a real provider plugin
+runs them.
 
 ## License
 

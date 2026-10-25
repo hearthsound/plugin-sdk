@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `hsplugin test` accepts repeatable `--tool <name>=<path>` mappings, parsed
+  like `hsplugin run`'s, so the `acquisition` suite runs a plugin that spawns a
+  tool instead of reporting it as `not-configured`.
+
 ## [0.4.0] - 2026-10-25
 
 ### Added

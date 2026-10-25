@@ -51,7 +51,7 @@ pub struct Session {
 }
 
 impl Session {
-    /// Opens a session on a checked component with the given server config.
+    /// Opens a session with tool mappings for `host-process` and a user config.
     ///
     /// The config has the manifest's server-scope schema defaults applied to
     /// every top-level property it leaves out.
@@ -61,28 +61,15 @@ impl Session {
     /// - `checked`: a component that passed `hsplugin check`.
     /// - `config`: the server-scoped configuration document; `Null` means no
     ///   settings were supplied.
-    ///
-    /// # Errors
-    ///
-    /// Returns a message when the engine, the staging directory, the linker or
-    /// the instantiation fails.
-    pub fn open(checked: &Checked, config: Value) -> Result<Self, String> {
-        Self::open_with(checked, config, HashMap::new(), None)
-    }
-
-    /// Opens a session with tool mappings for `host-process` and a user config.
-    ///
-    /// # Parameters
-    ///
-    /// - `checked`: a component that passed `hsplugin check`.
-    /// - `config`: the server-scoped configuration document.
-    /// - `tools`: executable paths keyed by the tool name a plugin spawns.
+    /// - `tools`: executable paths keyed by the tool name a plugin spawns; a
+    ///   tool without a mapping is `not-configured`.
     /// - `user_config`: the document handed to `user-context` arguments as
     ///   their `config` JSON.
     ///
     /// # Errors
     ///
-    /// Returns the same errors as [`Session::open`].
+    /// Returns a message when the engine, the staging directory, the linker or
+    /// the instantiation fails.
     pub fn open_with(
         checked: &Checked,
         config: Value,

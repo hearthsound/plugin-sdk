@@ -532,3 +532,104 @@ fn test_unknown_layer_is_rejected() {
         "unexpected stderr: {stderr}"
     );
 }
+
+/// Returns the path of the process-acquisition fixture's manifest.
+fn acquisition_fixture_manifest() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/process-acquisition/manifest.json")
+}
+
+/// Builds the process-acquisition fixture once and returns its component.
+fn acquisition_fixture_wasm() -> &'static Path {
+    static WASM: LazyLock<PathBuf> = LazyLock::new(|| {
+        let target = Path::new(env!("CARGO_TARGET_TMPDIR")).join("process-acquisition");
+        let status = Command::new(cargo())
+            .arg("build")
+            .arg("--release")
+            .arg("--target")
+            .arg("wasm32-wasip2")
+            .arg("--manifest-path")
+            .arg(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/process-acquisition/Cargo.toml"),
+            )
+            .arg("--target-dir")
+            .arg(&target)
+            .status()
+            .expect("cargo build runs");
+        assert!(status.success(), "building the fixture plugin failed");
+        target.join("wasm32-wasip2/release/process_acquisition_fixture.wasm")
+    });
+    &WASM
+}
+
+/// Writes an executable shell script that records that it ran and returns its
+/// path.
+///
+/// The script writes the marker file named `marker`, so a test proves the mock
+/// host started the tool rather than only accepting the mapping.
+#[cfg(unix)]
+fn marker_tool(marker: &Path) -> PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+
+    let script = Path::new(env!("CARGO_TARGET_TMPDIR")).join("hello-tool.sh");
+    std::fs::write(
+        &script,
+        format!("#!/bin/sh\nprintf ran > {}\n", marker.display()),
+    )
+    .unwrap();
+    std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    script
+}
+
+#[cfg(unix)]
+#[test]
+fn test_acquisition_suite_runs_a_mapped_tool() {
+    let marker = Path::new(env!("CARGO_TARGET_TMPDIR")).join("hello-tool-ran");
+    let _ = std::fs::remove_file(&marker);
+    let tool = marker_tool(&marker);
+    let manifest = acquisition_fixture_manifest();
+    let output = hsplugin(&[
+        "test",
+        "acquisition",
+        "--manifest",
+        arg(&manifest),
+        "--wasm",
+        arg(acquisition_fixture_wasm()),
+        "--tool",
+        &format!("hello-tool={}", arg(&tool)),
+    ]);
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "unexpected failure: {stdout}");
+    assert!(
+        stdout.contains("ok 2: start-search returns a token"),
+        "unexpected stdout: {stdout}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&marker).unwrap(),
+        "ran",
+        "the mapped tool did not run"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn test_acquisition_suite_without_a_tool_mapping_fails_the_start_check() {
+    let manifest = acquisition_fixture_manifest();
+    let output = hsplugin(&[
+        "test",
+        "acquisition",
+        "--manifest",
+        arg(&manifest),
+        "--wasm",
+        arg(acquisition_fixture_wasm()),
+    ]);
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        stdout.contains("error 2: start-search returns a token: ")
+            && stdout.contains("provider error invalid_config"),
+        "unexpected stdout: {stdout}"
+    );
+}

@@ -158,6 +158,11 @@ struct TestArgs {
     /// JSON file with the server-scoped configuration.
     #[arg(long)]
     config: Option<PathBuf>,
+
+    /// Maps a tool name to its executable for `host-process`, as
+    /// `<name>=<path>`; repeat once per tool.
+    #[arg(long = "tool", value_name = "NAME=PATH")]
+    tools: Vec<String>,
 }
 
 /// Arguments of `hsplugin pack`.
@@ -234,22 +239,29 @@ fn main() {
                 Err(error) => fail(&[error]),
             }
         }
-        Command::Test(args) => match suites::test(
-            &args.manifest,
-            args.wasm.as_deref(),
-            args.config.as_deref(),
-            &args.layer,
-        ) {
-            Ok(report) => {
-                for line in report.lines() {
-                    println!("{line}");
+        Command::Test(args) => {
+            let tools = match parse_tools(&args.tools) {
+                Ok(tools) => tools,
+                Err(error) => fail(&[error]),
+            };
+            match suites::test(
+                &args.manifest,
+                args.wasm.as_deref(),
+                args.config.as_deref(),
+                &args.layer,
+                tools,
+            ) {
+                Ok(report) => {
+                    for line in report.lines() {
+                        println!("{line}");
+                    }
+                    if !report.passed() {
+                        std::process::exit(1);
+                    }
                 }
-                if !report.passed() {
-                    std::process::exit(1);
-                }
+                Err(error) => fail(&[error]),
             }
-            Err(error) => fail(&[error]),
-        },
+        }
     }
 }
 

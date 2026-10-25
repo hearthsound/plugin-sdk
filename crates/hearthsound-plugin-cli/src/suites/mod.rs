@@ -16,7 +16,8 @@ mod metadata;
 mod scrobble;
 mod verification;
 
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -121,6 +122,9 @@ impl Report {
 /// - `config_path`: optional JSON file with the server-scoped configuration.
 /// - `layer`: one of `catalog`, `metadata`, `artwork`, `acquisition`,
 ///   `scrobble`, `discovery` or `verification`.
+/// - `tools`: executable paths keyed by tool name for `host-process`, so an
+///   acquisition suite runs a plugin that spawns a tool instead of reporting it
+///   as `not-configured`.
 ///
 /// # Errors
 ///
@@ -132,6 +136,7 @@ pub fn test(
     wasm: Option<&Path>,
     config_path: Option<&Path>,
     layer: &str,
+    tools: HashMap<String, PathBuf>,
 ) -> Result<Report, String> {
     if !LAYERS.contains(&layer) {
         return Err(format!(
@@ -144,7 +149,7 @@ pub fn test(
         read_json(config_path, "config")?.unwrap_or(Value::Null),
         checked.manifest().value(),
     );
-    let mut session = Session::open(&checked, config.clone())?;
+    let mut session = Session::open_with(&checked, config.clone(), tools, None)?;
     let mut report = Report::default();
     match layer {
         "catalog" => catalog::run(&mut session, &config, &mut report),
