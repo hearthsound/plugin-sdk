@@ -86,18 +86,6 @@
         ]
       }
     },
-    "catalog": {
-      "description": "Catalog layer options; allowed only for catalog plugins.",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "imageCachePolicy": {
-          "description": "Whether the server may cache this provider's images.",
-          "enum": ["cache", "no-store"],
-          "default": "cache"
-        }
-      }
-    },
     "urlPatterns": {
       "description": "URL patterns routing imports; allowed only for playlist-import plugins.",
       "type": "array",
@@ -114,21 +102,63 @@
           "description": "Outbound HTTP access.",
           "type": "object",
           "additionalProperties": false,
-          "required": ["hosts"],
+          "required": [
+            "hosts"
+          ],
           "properties": {
             "hosts": {
-              "description": "Hostnames the plugin may reach; wildcard or $config: prefixed entries allowed.",
+              "description": "Hostnames the plugin may reach; wildcard or $config: prefixed entries allowed. An entry with its own rateLimit object waits on that limit instead of the instance-wide one.",
               "type": "array",
               "items": {
-                "type": "string",
-                "pattern": "^(\\*\\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$|^\\$config:[A-Za-z][A-Za-z0-9_]*$"
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^(\\*\\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$|^\\$config:[A-Za-z][A-Za-z0-9_]*$"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "host",
+                      "rateLimit"
+                    ],
+                    "properties": {
+                      "host": {
+                        "type": "string",
+                        "pattern": "^(\\*\\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$|^\\$config:[A-Za-z][A-Za-z0-9_]*$"
+                      },
+                      "rateLimit": {
+                        "description": "Request rate the server enforces for this plugin.",
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "perSecond",
+                          "burst"
+                        ],
+                        "properties": {
+                          "perSecond": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "burst": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             },
             "rateLimit": {
               "description": "Request rate the server enforces for this plugin.",
               "type": "object",
               "additionalProperties": false,
-              "required": ["perSecond", "burst"],
+              "required": [
+                "perSecond",
+                "burst"
+              ],
               "properties": {
                 "perSecond": {
                   "type": "integer",
@@ -195,7 +225,10 @@
       "description": "Server- and user-scoped configuration the plugin accepts.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["server", "user"],
+      "required": [
+        "server",
+        "user"
+      ],
       "properties": {
         "server": {
           "description": "Server-scoped configuration, or null when the plugin takes none.",
@@ -261,11 +294,15 @@
         }
       },
       "then": {
-        "required": ["urlPatterns"]
+        "required": [
+          "urlPatterns"
+        ]
       },
       "else": {
         "not": {
-          "required": ["urlPatterns"]
+          "required": [
+            "urlPatterns"
+          ]
         }
       }
     },
@@ -282,7 +319,9 @@
       "then": {},
       "else": {
         "not": {
-          "required": ["catalog"]
+          "required": [
+            "catalog"
+          ]
         }
       }
     }
@@ -292,7 +331,10 @@
       "description": "A JSON Schema plus its form layout.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema", "uiSchema"],
+      "required": [
+        "schema",
+        "uiSchema"
+      ],
       "properties": {
         "schema": {
           "description": "A draft-07 JSON Schema for this configuration section.",

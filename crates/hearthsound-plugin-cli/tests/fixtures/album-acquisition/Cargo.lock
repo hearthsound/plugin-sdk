@@ -44,12 +44,13 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-acquisition",
  "hearthsound-plugin-artwork",
  "hearthsound-plugin-bindings",
  "hearthsound-plugin-catalog-artwork",
+ "hearthsound-plugin-catalog-metadata-artwork",
  "hearthsound-plugin-metadata",
  "hearthsound-plugin-metadata-artwork",
  "hearthsound-plugin-process-acquisition",
@@ -62,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-acquisition"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -70,7 +71,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-artwork"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -78,14 +79,22 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-bindings"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "wit-bindgen",
 ]
 
 [[package]]
 name = "hearthsound-plugin-catalog-artwork"
-version = "0.4.0"
+version = "0.5.0"
+dependencies = [
+ "hearthsound-plugin-bindings",
+ "wit-bindgen",
+]
+
+[[package]]
+name = "hearthsound-plugin-catalog-metadata-artwork"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -93,7 +102,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-metadata"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -101,7 +110,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-metadata-artwork"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -109,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-process-acquisition"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -117,7 +126,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-scrobble-discovery-account-link"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",
@@ -125,7 +134,7 @@ dependencies = [
 
 [[package]]
 name = "hearthsound-plugin-verification"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "hearthsound-plugin-bindings",
  "wit-bindgen",

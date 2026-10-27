@@ -41,6 +41,10 @@ fn hello_album_ref() -> AlbumRef {
         }],
         year: Some(2026),
         images: vec![],
+        album_type: Some("album".to_string()),
+        edition: None,
+        track_count: Some(1),
+        ids: vec![],
     }
 }
 
@@ -170,6 +174,7 @@ impl catalog::Guest for HelloCatalog {
                 images: vec![],
                 tracks: vec![hello_track(&config.greeting, "world")],
                 ids: vec![],
+                edition: None,
             })
         } else {
             Err(ProviderError::NotFound)
@@ -208,6 +213,15 @@ impl catalog::Guest for HelloCatalog {
 
     fn lookup_isrc(_isrc: String) -> Result<Vec<Track>, ProviderError> {
         Ok(vec![])
+    }
+
+    fn lookup_album(ids: Vec<IdPair>) -> Result<Vec<AlbumRef>, ProviderError> {
+        Ok(ids
+            .iter()
+            .any(|pair| pair.value == "hello-album-1")
+            .then(hello_album_ref)
+            .into_iter()
+            .collect())
     }
 }
 

@@ -6,6 +6,7 @@ members = [
     "crates/hearthsound-plugin-artwork",
     "crates/hearthsound-plugin-bindings",
     "crates/hearthsound-plugin-catalog-artwork",
+    "crates/hearthsound-plugin-catalog-metadata-artwork",
     "crates/hearthsound-plugin-cli",
     "crates/hearthsound-plugin-metadata",
     "crates/hearthsound-plugin-metadata-artwork",
@@ -16,7 +17,7 @@ members = [
 exclude = ["examples/hello-catalog"]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 rust-version = "1.96"
 license = "MIT OR Apache-2.0"

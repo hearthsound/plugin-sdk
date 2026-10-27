@@ -1,7 +1,7 @@
 //! Rust SDK for building Hearthsound plugins.
 //!
 //! A Hearthsound plugin is a WebAssembly component that speaks the
-//! `hearthsound:plugin@0.4.0` WIT package. This crate re-exports the bindings
+//! `hearthsound:plugin@0.5.0` WIT package. This crate re-exports the bindings
 //! for that package, generates the catalog world, and provides the host-import
 //! wrappers and logging macros a plugin implementation needs. It is the only
 //! crate a plugin depends on.
@@ -38,6 +38,10 @@
 //!   and [`metadata_artwork_provider`] and
 //!   [`export_metadata_artwork_provider!`](crate::export_metadata_artwork_provider),
 //!   for plugins that serve a second layer alongside `artwork`.
+//! - [`catalog_metadata_artwork_provider`] and
+//!   [`export_catalog_metadata_artwork_provider!`](crate::export_catalog_metadata_artwork_provider)
+//!   for a plugin that covers catalog, metadata and artwork at once, the way a
+//!   full music database plugin does.
 //!
 //! The shared [`types`] module and the [`host`] imports are generated once in
 //! `hearthsound-plugin-bindings`, and every world remaps its imports there, so a
@@ -58,6 +62,7 @@
 //! | `hearthsound-plugin-artwork` | The `artwork` provider world |
 //! | `hearthsound-plugin-metadata-artwork` | The `metadata` and `artwork` provider world |
 //! | `hearthsound-plugin-catalog-artwork` | The `catalog` and `artwork` provider world |
+//! | `hearthsound-plugin-catalog-metadata-artwork` | The `catalog`, `metadata` and `artwork` provider world |
 //! | `hearthsound-plugin-acquisition` | The `acquisition` provider world |
 //! | `hearthsound-plugin-process-acquisition` | The `acquisition` provider world with the `host-process` import |
 //! | `hearthsound-plugin-verification` | The `verification` provider world |
@@ -98,7 +103,7 @@
 //!
 //! See `examples/hello-catalog` in this repository for a complete plugin.
 
-/// Shared record types of the `hearthsound:plugin@0.4.0` package.
+/// Shared record types of the `hearthsound:plugin@0.5.0` package.
 ///
 /// This re-exports the generated `types` interface, which holds the records
 /// every provider interface shares: `IdPair`, `ArtistCredit`, `Image`,
@@ -132,11 +137,11 @@ pub mod catalog_provider {
         path: "../../wit",
         world: "hearthsound:plugin/catalog-provider",
         with: {
-            "hearthsound:plugin/types@0.4.0": hearthsound_plugin_bindings::types,
-            "hearthsound:plugin/host-log@0.4.0": hearthsound_plugin_bindings::host::log,
-            "hearthsound:plugin/host-http@0.4.0": hearthsound_plugin_bindings::host::http,
-            "hearthsound:plugin/host-kv@0.4.0": hearthsound_plugin_bindings::host::kv,
-            "hearthsound:plugin/host-config@0.4.0": hearthsound_plugin_bindings::host::config,
+            "hearthsound:plugin/types@0.5.0": hearthsound_plugin_bindings::types,
+            "hearthsound:plugin/host-log@0.5.0": hearthsound_plugin_bindings::host::log,
+            "hearthsound:plugin/host-http@0.5.0": hearthsound_plugin_bindings::host::http,
+            "hearthsound:plugin/host-kv@0.5.0": hearthsound_plugin_bindings::host::kv,
+            "hearthsound:plugin/host-config@0.5.0": hearthsound_plugin_bindings::host::config,
         },
         generate_all,
         pub_export_macro: true,
@@ -283,6 +288,39 @@ pub use hearthsound_plugin_catalog_artwork::catalog_artwork_provider;
 /// ```
 #[doc(inline)]
 pub use catalog_artwork_provider::export_catalog_artwork_provider;
+
+/// The catalog, metadata and artwork provider world and its export macro.
+///
+/// The generated module tree contains the guest traits a plugin that serves all
+/// three layers implements under
+/// `exports::hearthsound::plugin::{catalog, metadata, artwork, lifecycle}`, plus
+/// the
+/// [`export_catalog_metadata_artwork_provider!`](crate::export_catalog_metadata_artwork_provider)
+/// macro that wires a type implementing them into the component's exports.
+#[doc(inline)]
+pub use hearthsound_plugin_catalog_metadata_artwork::catalog_metadata_artwork_provider;
+
+/// Wires a catalog, metadata and artwork provider into the component's exports.
+///
+/// Pass a type that implements the
+/// `catalog_metadata_artwork_provider::exports::hearthsound::plugin::lifecycle::Guest`,
+/// `...::catalog::Guest`, `...::metadata::Guest` and `...::artwork::Guest`
+/// traits. The macro expands to the `#[unsafe(no_mangle)]` entry points the
+/// component model expects.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyFullProvider;
+/// // impl ...::lifecycle::Guest for MyFullProvider {}
+/// // impl ...::catalog::Guest for MyFullProvider {}
+/// // impl ...::metadata::Guest for MyFullProvider {}
+/// // impl ...::artwork::Guest for MyFullProvider {}
+///
+/// hearthsound_plugin::export_catalog_metadata_artwork_provider!(MyFullProvider);
+/// ```
+#[doc(inline)]
+pub use catalog_metadata_artwork_provider::export_catalog_metadata_artwork_provider;
 
 /// The acquisition provider world and its export macro.
 ///

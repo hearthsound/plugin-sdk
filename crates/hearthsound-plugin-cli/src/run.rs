@@ -154,7 +154,7 @@ impl Session {
         if !CAPABILITIES.contains(&capability) {
             return Err(format!("unknown capability `{capability}`"));
         }
-        let interface = format!("hearthsound:plugin/{capability}@0.4.0");
+        let interface = format!("hearthsound:plugin/{capability}@0.5.0");
         let name = function.replace('_', "-");
         let interface_index = self
             .instance

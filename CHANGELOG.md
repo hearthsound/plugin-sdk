@@ -7,8 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-27
+
+### Added
+
+- `catalog.lookup-album`, which returns the coarse album refs a provider holds
+  for any of the given canonical ids (`upc`, `mb-release`,
+  `mb-release-group`).
+- The `hearthsound-plugin-catalog-metadata-artwork` crate, which generates the
+  `catalog`, `metadata` and `artwork` provider world and the
+  `export_catalog_metadata_artwork_provider!` macro, so one plugin can cover
+  all three layers.
+- `hosts` entries in `permissions.http` accept an object,
+  `{"host": ..., "rateLimit": {"perSecond": ..., "burst": ...}}`, so one
+  service can be throttled harder than the rest of a plugin's hosts. A plain
+  string entry keeps using the instance-wide `rateLimit`.
+
 ### Changed
 
+- `types.album-ref` carries `album-type`, `edition`, `track-count` and `ids`,
+  and `types.album` carries `edition`, so a catalog can describe a release
+  without its tracklist.
+- The WIT package version is now `0.5.0`, so the API string a manifest
+  declares and a component is checked against is `hearthsound:plugin@0.5.0`.
 - `hsplugin test` accepts repeatable `--tool <name>=<path>` mappings, parsed
   like `hsplugin run`'s, so the `acquisition` suite runs a plugin that spawns a
   tool instead of reporting it as `not-configured`.
@@ -16,6 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the granularity the plugin advertises, `track` when it offers both and
   `album` for an album-only provider; a capability list with neither fails the
   first check.
+
+### Removed
+
+- The manifest `catalog` block and its `imageCachePolicy`: the server stores
+  every provider image itself, so a plugin no longer declares an image caching
+  policy.
 
 ## [0.4.0] - 2026-10-25
 

@@ -1,4 +1,4 @@
-//! The catalog and artwork provider world of the `hearthsound:plugin@0.4.0`
+//! The catalog and artwork provider world of the `hearthsound:plugin@0.5.0`
 //! WIT package.
 //!
 //! A plugin that both answers catalog searches and finds cover images
@@ -29,19 +29,19 @@ pub mod catalog_artwork_provider {
     wit_bindgen::generate!({
         path: "../../wit",
         inline: "
-            package hearthsound:sdk@0.4.0;
+            package hearthsound:sdk@0.5.0;
             world catalog-artwork-provider {
-                include hearthsound:plugin/catalog-provider@0.4.0;
-                export hearthsound:plugin/artwork@0.4.0;
+                include hearthsound:plugin/catalog-provider@0.5.0;
+                export hearthsound:plugin/artwork@0.5.0;
             }
         ",
         world: "hearthsound:sdk/catalog-artwork-provider",
         with: {
-            "hearthsound:plugin/types@0.4.0": hearthsound_plugin_bindings::types,
-            "hearthsound:plugin/host-log@0.4.0": hearthsound_plugin_bindings::host::log,
-            "hearthsound:plugin/host-http@0.4.0": hearthsound_plugin_bindings::host::http,
-            "hearthsound:plugin/host-kv@0.4.0": hearthsound_plugin_bindings::host::kv,
-            "hearthsound:plugin/host-config@0.4.0": hearthsound_plugin_bindings::host::config,
+            "hearthsound:plugin/types@0.5.0": hearthsound_plugin_bindings::types,
+            "hearthsound:plugin/host-log@0.5.0": hearthsound_plugin_bindings::host::log,
+            "hearthsound:plugin/host-http@0.5.0": hearthsound_plugin_bindings::host::http,
+            "hearthsound:plugin/host-kv@0.5.0": hearthsound_plugin_bindings::host::kv,
+            "hearthsound:plugin/host-config@0.5.0": hearthsound_plugin_bindings::host::config,
         },
         generate_all,
         pub_export_macro: true,

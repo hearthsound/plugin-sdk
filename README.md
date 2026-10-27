@@ -12,13 +12,14 @@ speak.
 
 | Path | Contents |
 |---|---|
-| `wit/` | The `hearthsound:plugin@0.4.0` WIT package. |
+| `wit/` | The `hearthsound:plugin@0.5.0` WIT package. |
 | `crates/hearthsound-plugin` | The Rust SDK a plugin depends on: the catalog provider world, host wrappers, the logging, config, HTTP and KV helpers, and the export macros. |
 | `crates/hearthsound-plugin-bindings` | The shared `types` and host-import bindings every provider world remaps to. |
 | `crates/hearthsound-plugin-metadata` | The metadata provider world. |
 | `crates/hearthsound-plugin-artwork` | The artwork provider world. |
 | `crates/hearthsound-plugin-metadata-artwork` | The metadata and artwork provider world. |
 | `crates/hearthsound-plugin-catalog-artwork` | The catalog and artwork provider world. |
+| `crates/hearthsound-plugin-catalog-metadata-artwork` | The catalog, metadata and artwork provider world. |
 | `crates/hearthsound-plugin-acquisition` | The acquisition provider world. |
 | `crates/hearthsound-plugin-process-acquisition` | The acquisition provider world with the `host-process` import, for plugins that run a configured tool. |
 | `crates/hearthsound-plugin-verification` | The verification provider world. |
@@ -32,14 +33,14 @@ Add the SDK as a dependency and export a provider:
 
 ```toml
 [dependencies]
-hearthsound-plugin = { git = "https://github.com/hearthsound/plugin-sdk", tag = "v0.4.0" }
+hearthsound-plugin = { git = "https://github.com/hearthsound/plugin-sdk", tag = "v0.5.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ```
 
 The SDK and `hsplugin` check the API version they were built against. A plugin
-for `hearthsound:plugin@0.3.0` is built and checked with `tag = "v0.3.0"`; the
-server loads both 0.4.0 and 0.3.0 components.
+for `hearthsound:plugin@0.4.0` is built and checked with `tag = "v0.4.0"`; the
+server loads both 0.5.0 and 0.4.0 components.
 
 One export macro per provider layer:
 
@@ -96,7 +97,7 @@ See `hearthsound/plugin-template-rust` for a ready-to-fork project.
 the repository head with:
 
 ```console
-cargo install --locked --git https://github.com/hearthsound/plugin-sdk --tag v0.4.0 hearthsound-plugin-cli
+cargo install --locked --git https://github.com/hearthsound/plugin-sdk --tag v0.5.0 hearthsound-plugin-cli
 ```
 
 Every command takes `--manifest <PATH>` (default `manifest.json`). Commands that

@@ -56,6 +56,59 @@ impl Rule {
     }
 }
 
+/// One `permissions.http.hosts` entry, with the rate limit it declares.
+///
+/// A plain string entry waits on the instance-wide
+/// `permissions.http.rateLimit`; an object entry waits on its own limit
+/// instead.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HostEntry {
+    /// A host pattern with no limit of its own.
+    Pattern(String),
+    /// A host pattern with its own rate limit.
+    Limited {
+        /// Host pattern, in the same forms [`Rule::parse`] accepts.
+        host: String,
+        /// Requests per second allowed for this host.
+        per_second: u32,
+        /// Largest burst allowed for this host.
+        burst: u32,
+    },
+}
+
+impl HostEntry {
+    /// Parses one raw `permissions.http.hosts` value.
+    ///
+    /// A string becomes [`HostEntry::Pattern`]; an object with `host` and
+    /// `rateLimit.perSecond`/`rateLimit.burst` becomes [`HostEntry::Limited`].
+    /// A malformed or non-string entry yields `None`, exactly like a non-string
+    /// entry did before object entries existed.
+    pub fn from_json(value: &Value) -> Option<Self> {
+        match value {
+            Value::String(pattern) => Some(Self::Pattern(pattern.clone())),
+            Value::Object(_) => {
+                let host = value.get("host")?.as_str()?.to_owned();
+                let limit = value.get("rateLimit")?;
+                let per_second = u32::try_from(limit.get("perSecond")?.as_u64()?).ok()?;
+                let burst = u32::try_from(limit.get("burst")?.as_u64()?).ok()?;
+                Some(Self::Limited {
+                    host,
+                    per_second,
+                    burst,
+                })
+            }
+            _ => None,
+        }
+    }
+
+    /// The host pattern this entry matches.
+    pub fn host(&self) -> &str {
+        match self {
+            Self::Pattern(host) | Self::Limited { host, .. } => host,
+        }
+    }
+}
+
 /// Why a guest HTTP call failed. Mapped onto the WIT `http-error` variant by
 /// the host bindings.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -153,8 +206,8 @@ impl Limiter {
 /// [`Policy::from_manifest`]; tests construct it directly.
 #[derive(Debug, Clone)]
 pub struct Settings {
-    /// Raw `permissions.http.hosts` entries.
-    pub hosts: Vec<String>,
+    /// Parsed `permissions.http.hosts` entries.
+    pub hosts: Vec<HostEntry>,
     /// `(perSecond, burst)` from `permissions.http.rateLimit`, if declared.
     pub rate: Option<(u32, u32)>,
     /// Response body cap in bytes.
@@ -166,6 +219,8 @@ pub struct Settings {
 /// The outbound HTTP policy of one plugin run.
 pub struct Policy {
     rules: Vec<Rule>,
+    /// One slot per rule: the rule's own limiter when it declared one.
+    limiters: Vec<Option<Limiter>>,
     limiter: Option<Limiter>,
     max_body: u64,
     user_agent: String,
@@ -178,6 +233,8 @@ pub struct Policy {
 struct Authorized {
     url: Url,
     resolve: bool,
+    /// Index of the rule that allowed the host.
+    rule: usize,
 }
 
 impl Policy {
@@ -194,13 +251,7 @@ impl Policy {
         let hosts = manifest
             .pointer("/permissions/http/hosts")
             .and_then(Value::as_array)
-            .map(|entries| {
-                entries
-                    .iter()
-                    .filter_map(Value::as_str)
-                    .map(str::to_owned)
-                    .collect()
-            })
+            .map(|entries| entries.iter().filter_map(HostEntry::from_json).collect())
             .unwrap_or_default();
         let rate = manifest
             .pointer("/permissions/http/rateLimit")
@@ -239,7 +290,17 @@ impl Policy {
             rules: settings
                 .hosts
                 .iter()
-                .map(|entry| Rule::parse(entry))
+                .map(|entry| Rule::parse(entry.host()))
+                .collect(),
+            limiters: settings
+                .hosts
+                .iter()
+                .map(|entry| match entry {
+                    HostEntry::Pattern(_) => None,
+                    HostEntry::Limited {
+                        per_second, burst, ..
+                    } => Some(Limiter::new(*per_second, *burst, now)),
+                })
                 .collect(),
             limiter: settings
                 .rate
@@ -279,7 +340,7 @@ impl Policy {
             if authorized.resolve {
                 check_public(&authorized.url)?;
             }
-            self.throttle(timeout)?;
+            self.throttle(Some(authorized.rule), timeout)?;
 
             let verb = reqwest::Method::from_bytes(method.as_bytes())
                 .map_err(|error| Failure::Network(format!("invalid method: {error}")))?;
@@ -340,10 +401,17 @@ impl Policy {
         Err(Failure::Network("too many redirects".to_owned()))
     }
 
-    /// Waits for the rate limiter, or fails with [`Failure::Timeout`] when
-    /// the wait would exceed `timeout`.
-    fn throttle(&mut self, timeout: Duration) -> Result<(), Failure> {
-        let Some(limiter) = self.limiter.as_mut() else {
+    /// Waits for the rate limiter that applies to the matched rule, or fails
+    /// with [`Failure::Timeout`] when the wait would exceed `timeout`.
+    ///
+    /// A rule that declared its own `rateLimit` waits on that limiter only; any
+    /// other rule waits on the instance-wide limiter.
+    fn throttle(&mut self, rule: Option<usize>, timeout: Duration) -> Result<(), Failure> {
+        let per_host = rule
+            .and_then(|index| self.limiters.get_mut(index))
+            .and_then(|slot| slot.as_mut());
+        let limiter = per_host.or(self.limiter.as_mut());
+        let Some(limiter) = limiter else {
             return Ok(());
         };
         let wait = limiter.take(Instant::now());
@@ -392,7 +460,8 @@ pub fn timeout_for(requested: Option<u32>) -> Duration {
 /// Only `http` and `https` are allowed. The host must match a rule: literal
 /// equality, `*.domain` for a proper subdomain, or a `$config:` rule whose
 /// configured value names the host. Static matches still need the
-/// public-address check.
+/// public-address check. The matched rule's index is returned so the caller
+/// can pick that rule's own rate limit.
 fn authorize(rules: &[Rule], url: &str, config: &Value) -> Result<Authorized, Failure> {
     let parsed =
         Url::parse(url).map_err(|error| Failure::Network(format!("invalid url: {error}")))?;
@@ -405,12 +474,12 @@ fn authorize(rules: &[Rule], url: &str, config: &Value) -> Result<Authorized, Fa
         .map(str::to_ascii_lowercase)
         .ok_or_else(|| Failure::Denied("url has no host".to_owned()))?;
 
-    let mut resolve = None;
-    for rule in rules {
+    let mut matched: Option<(usize, bool)> = None;
+    for (index, rule) in rules.iter().enumerate() {
         match rule {
-            Rule::Literal(name) if *name == host => resolve = Some(true),
+            Rule::Literal(name) if *name == host => matched = Some((index, true)),
             Rule::Wildcard(domain) if host.ends_with(&format!(".{domain}")) => {
-                resolve = Some(true);
+                matched = Some((index, true));
             }
             Rule::Config(field) => {
                 let configured = config.get(field).and_then(Value::as_str);
@@ -418,19 +487,20 @@ fn authorize(rules: &[Rule], url: &str, config: &Value) -> Result<Authorized, Fa
                     .and_then(config_host)
                     .is_some_and(|name| name == host)
                 {
-                    resolve = resolve.or(Some(false));
+                    matched = matched.or(Some((index, false)));
                 }
             }
             _ => {}
         }
-        if resolve == Some(true) {
+        if matched.is_some_and(|(_, resolve)| resolve) {
             break;
         }
     }
-    match resolve {
-        Some(resolve) => Ok(Authorized {
+    match matched {
+        Some((rule, resolve)) => Ok(Authorized {
             url: parsed,
             resolve,
+            rule,
         }),
         None => Err(Failure::Denied(format!(
             "host {host} is not in the allowlist"
@@ -683,7 +753,65 @@ mod tests {
         let policy = Policy::from_manifest(&manifest, "hsplugin".to_owned()).unwrap();
         assert_eq!(policy.max_body, 1024);
         assert_eq!(policy.rules, rules(&["api.example.com"]));
+        assert!(policy.limiters.iter().all(Option::is_none));
         assert!(policy.limiter.is_some());
+    }
+
+    #[test]
+    fn host_objects_carry_their_own_limit() {
+        let manifest = json!({
+            "permissions": {
+                "http": {
+                    "hosts": [
+                        {"host": "musicbrainz.org", "rateLimit": {"perSecond": 1, "burst": 1}},
+                        "*.example.com",
+                        {"host": "broken.example.com"}
+                    ],
+                    "rateLimit": {"perSecond": 5, "burst": 5}
+                }
+            }
+        });
+        let policy = Policy::from_manifest(&manifest, "hsplugin".to_owned()).unwrap();
+        assert_eq!(
+            policy.rules,
+            rules(&["musicbrainz.org", "*.example.com"]),
+            "an object entry without rateLimit is ignored"
+        );
+        assert!(policy.limiters[0].is_some());
+        assert!(policy.limiters[1].is_none());
+        let matched = authorize(
+            &policy.rules,
+            "https://musicbrainz.org/ws/2/artist",
+            &json!({}),
+        )
+        .unwrap();
+        assert_eq!(matched.rule, 0);
+        let other = authorize(&policy.rules, "https://a.example.com/", &json!({})).unwrap();
+        assert_eq!(other.rule, 1);
+    }
+
+    #[test]
+    fn host_entries_parse_strings_and_objects() {
+        assert_eq!(
+            HostEntry::from_json(&json!("api.example.com")),
+            Some(HostEntry::Pattern("api.example.com".to_owned()))
+        );
+        assert_eq!(
+            HostEntry::from_json(&json!({
+                "host": "$config:baseUrl",
+                "rateLimit": {"perSecond": 1, "burst": 1}
+            })),
+            Some(HostEntry::Limited {
+                host: "$config:baseUrl".to_owned(),
+                per_second: 1,
+                burst: 1,
+            })
+        );
+        assert_eq!(HostEntry::from_json(&json!(7)), None);
+        assert_eq!(
+            HostEntry::from_json(&json!({"host": "a.example.com"})),
+            None
+        );
     }
 
     #[test]
